@@ -1,0 +1,18 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: sqlbuilder-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sqlbuilder
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./db/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+
+volumes:
+  pg_data:
