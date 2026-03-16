@@ -71,6 +71,29 @@ export default function DashboardPage() {
     return Object.keys(execResult.rows[0]);
   }, [execResult]);
 
+  async function handleDryRun() {
+    await runReport(scopedPlan, true);
+  }
+
+  async function runReport(plan, dryRun = false) {
+    if (!plan) return;
+    setLoadingExec(true);
+    setError("");
+
+    try {
+      const result = await executeReport(token, plan, dryRun);
+      setExecResult(result);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoadingExec(false);
+    }
+  }
+
+  async function handleRunReport(planOverride) {
+    await runReport(planOverride || scopedPlan, false);
+  }
+
   async function handleGeneratePlan() {
     setLoadingPlan(true);
     setError("");
@@ -79,40 +102,11 @@ export default function DashboardPage() {
     try {
       const result = await createReportPlan(token, prompt);
       setPlanResult(result);
+      await handleRunReport(result?.scopedPlan);
     } catch (err) {
       setError(err.message);
     } finally {
       setLoadingPlan(false);
-    }
-  }
-
-  async function handleDryRun() {
-    if (!scopedPlan) return;
-    setLoadingExec(true);
-    setError("");
-
-    try {
-      const result = await executeReport(token, scopedPlan, true);
-      setExecResult(result);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoadingExec(false);
-    }
-  }
-
-  async function handleRunReport() {
-    if (!scopedPlan) return;
-    setLoadingExec(true);
-    setError("");
-
-    try {
-      const result = await executeReport(token, scopedPlan, false);
-      setExecResult(result);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoadingExec(false);
     }
   }
 
