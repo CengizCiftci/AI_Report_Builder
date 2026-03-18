@@ -11,6 +11,8 @@ import {
   Chip,
   Container,
   Divider,
+  Drawer,
+  IconButton,
   Paper,
   Stack,
   Table,
@@ -21,6 +23,7 @@ import {
   TextField,
   Typography
 } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
 import { createReportPlan, executeReport } from "@/lib/api";
 
 function JsonPreview({ title, data }) {
@@ -48,6 +51,7 @@ export default function DashboardPage() {
   const [error, setError] = useState("");
   const [loadingPlan, setLoadingPlan] = useState(false);
   const [loadingExec, setLoadingExec] = useState(false);
+  const [debugOpen, setDebugOpen] = useState(false);
 
   useEffect(() => {
     const savedToken = localStorage.getItem("sqlbuilder_token");
@@ -132,6 +136,9 @@ export default function DashboardPage() {
                 {(user?.roles || []).map((role) => (
                   <Chip key={role} label={role} color="primary" variant="outlined" />
                 ))}
+                <Button variant="outlined" onClick={() => setDebugOpen(true)}>
+                  Debug Paneli
+                </Button>
                 <Button onClick={handleLogout} color="secondary" variant="contained">
                   Çıkış
                 </Button>
@@ -168,25 +175,13 @@ export default function DashboardPage() {
 
         {error ? <Alert severity="error">{error}</Alert> : null}
 
-        <Stack direction={{ xs: "column", lg: "row" }} spacing={2}>
-          <Box sx={{ flex: 1 }}>
-            <JsonPreview title="LLM Draft Plan" data={planResult?.plan} />
-          </Box>
-          <Box sx={{ flex: 1 }}>
-            <JsonPreview title="Scope Uygulanmış Plan" data={planResult?.scopedPlan} />
-          </Box>
-        </Stack>
-
         {execResult ? (
           <Card sx={{ backgroundColor: "var(--paper-surface)" }}>
             <CardContent>
               <Stack spacing={2}>
-                <Typography variant="h6">SQL & Sonuç</Typography>
-                <Paper variant="outlined" sx={{ p: 2, backgroundColor: "#020617", color: "#e2e8f0", overflowX: "auto" }}>
-                  <pre style={{ margin: 0, fontSize: 12 }}>{execResult.sql}</pre>
-                </Paper>
+                <Typography variant="h6">Rapor Sonucu</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Parametreler: {JSON.stringify(execResult.params || [])}
+                  Teknik plan ve SQL detaylarını sağ üstteki <strong>Debug Paneli</strong> üzerinden isteğe bağlı izleyebilirsiniz.
                 </Typography>
                 <Divider />
                 {execResult.rows?.length ? (
@@ -218,6 +213,38 @@ export default function DashboardPage() {
           </Card>
         ) : null}
       </Stack>
+
+      <Drawer anchor="right" open={debugOpen} onClose={() => setDebugOpen(false)}>
+        <Box sx={{ width: { xs: "100vw", sm: 520 }, p: 2 }}>
+          <Stack spacing={2}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between">
+              <Typography variant="h6">Debug Paneli</Typography>
+              <IconButton onClick={() => setDebugOpen(false)} aria-label="debug panelini kapat">
+                <CloseIcon />
+              </IconButton>
+            </Stack>
+            <Typography variant="body2" color="text.secondary">
+              Bu panelde planlama ve SQL üretim adımlarının ham çıktıları yer alır.
+            </Typography>
+            <Divider />
+
+            <JsonPreview title="LLM Draft Plan (planResult?.plan)" data={planResult?.plan} />
+            <JsonPreview title="Scope Uygulanmış Plan (planResult?.scopedPlan)" data={planResult?.scopedPlan} />
+
+            <Paper
+              variant="outlined"
+              sx={{ p: 2, backgroundColor: "#020617", color: "#e2e8f0", overflowX: "auto" }}
+            >
+              <Typography variant="subtitle2" sx={{ mb: 1, color: "#94a3b8" }}>
+                SQL (execResult.sql)
+              </Typography>
+              <pre style={{ margin: 0, fontSize: 12 }}>{execResult?.sql || "Henüz SQL üretilmedi."}</pre>
+            </Paper>
+
+            <JsonPreview title="SQL Parametreleri (execResult.params)" data={execResult?.params || []} />
+          </Stack>
+        </Box>
+      </Drawer>
     </Container>
   );
 }
