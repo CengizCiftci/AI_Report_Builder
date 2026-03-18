@@ -26,6 +26,25 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import { createReportPlan, executeReport } from "@/lib/api";
 
+function composePlannerPrompt(promptHistory, latestPrompt, clarificationQuestion) {
+  const prompts = [...promptHistory, latestPrompt]
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  const lines = ["Report request conversation:"];
+  prompts.forEach((item, idx) => {
+    lines.push(`User prompt ${idx + 1}: ${item}`);
+  });
+
+  if (clarificationQuestion) {
+    lines.push(
+      `The latest user prompt is an answer to this clarification question: ${clarificationQuestion}`
+    );
+  }
+
+  return lines.join("\n");
+}
+
 function JsonPreview({ title, data }) {
   if (!data) return null;
 
@@ -52,6 +71,8 @@ export default function DashboardPage() {
   const [loadingPlan, setLoadingPlan] = useState(false);
   const [loadingExec, setLoadingExec] = useState(false);
   const [debugOpen, setDebugOpen] = useState(false);
+  const [clarificationQuestion, setClarificationQuestion] = useState("");
+  const [promptHistory, setPromptHistory] = useState([]);
 
   useEffect(() => {
     const savedToken = localStorage.getItem("sqlbuilder_token");
@@ -97,21 +118,54 @@ export default function DashboardPage() {
   async function handleRunReport(planOverride) {
     await runReport(planOverride || scopedPlan, false);
   }
+  
 
   async function handleGeneratePlan() {
+    const nextPrompt = prompt.trim();
+    if (!nextPrompt) {
+      setError("Lütfen rapor talebini girin.");
+      return;
+    }
+
     setLoadingPlan(true);
     setError("");
     setExecResult(null);
 
     try {
-      const result = await createReportPlan(token, prompt);
+      const plannerPrompt = composePlannerPrompt(
+        promptHistory,
+        nextPrompt,
+        clarificationQuestion
+      );
+
+      const result = await createReportPlan(token, plannerPrompt);
       setPlanResult(result);
+
+      const nextClarificationQuestion =
+        result?.plan?.clarificationQuestion?.trim() || "";
+
+      if (nextClarificationQuestion) {
+        setPromptHistory((prev) => [...prev, nextPrompt]);
+        setClarificationQuestion(nextClarificationQuestion);
+        setPrompt("");
+        return;
+      }
+
+      setPromptHistory([]);
+      setClarificationQuestion("");
       await handleRunReport(result?.scopedPlan);
     } catch (err) {
       setError(err.message);
     } finally {
       setLoadingPlan(false);
     }
+  }
+
+  function handleResetPromptFlow() {
+    setPromptHistory([]);
+    setClarificationQuestion("");
+    setPrompt("");
+    setError("");
   }
 
   function handleLogout() {
@@ -151,23 +205,61 @@ export default function DashboardPage() {
           <CardContent>
             <Stack spacing={2}>
               <Typography variant="h6">Doğal Dil Rapor Talebi</Typography>
+              {clarificationQuestion ? (
+                <Alert severity="info">
+                  <Typography variant="subtitle2">Ek açıklama gerekli</Typography>
+                  <Typography variant="body2">{clarificationQuestion}</Typography>
+                </Alert>
+              ) : null}
+              {promptHistory.length ? (
+                <Paper variant="outlined" sx={{ p: 1.5 }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    Önceki Promptlar
+                  </Typography>
+                  <Stack spacing={0.5}>
+                    {promptHistory.map((item, idx) => (
+                      <Typography key={`${idx}-${item}`} variant="body2" color="text.secondary">
+                        {idx + 1}. {item}
+                      </Typography>
+                    ))}
+                  </Stack>
+                </Paper>
+              ) : null}
               <TextField
                 multiline
                 minRows={4}
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Ör: Son 30 günde okul bazında devamsızlık oranı ve öğrenci sayısı"
+                placeholder={
+                  clarificationQuestion
+                    ? "Ek açıklama/yanıt prompt'unu girin"
+                    : "Ör: Son 30 günde okul bazında devamsızlık oranı ve öğrenci sayısı"
+                }
               />
               <Stack direction="row" spacing={1}>
                 <Button variant="contained" onClick={handleGeneratePlan} disabled={loadingPlan || !token}>
-                  {loadingPlan ? "Plan üretiliyor..." : "REPORT Plan Üret"}
+                  {loadingPlan
+                    ? "Plan üretiliyor..."
+                    : clarificationQuestion
+                      ? "Yanıtı Ekle ve Report Plan Üret"
+                      : "REPORT Plan Üret"}
                 </Button>
-                <Button variant="outlined" onClick={handleDryRun} disabled={!scopedPlan || loadingExec}>
+                <Button variant="outlined" onClick={handleDryRun} disabled={!scopedPlan || loadingExec || loadingPlan}>
                   SQL Önizle (Dry Run)
                 </Button>
-                <Button variant="contained" color="secondary" onClick={handleRunReport} disabled={!scopedPlan || loadingExec}>
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  onClick={handleRunReport}
+                  disabled={!scopedPlan || loadingExec || loadingPlan}
+                >
                   {loadingExec ? "Çalışıyor..." : "Raporu Çalıştır"}
                 </Button>
+                {(clarificationQuestion || promptHistory.length) && (
+                  <Button variant="text" color="inherit" onClick={handleResetPromptFlow}>
+                    Akışı Sıfırla
+                  </Button>
+                )}
               </Stack>
             </Stack>
           </CardContent>
