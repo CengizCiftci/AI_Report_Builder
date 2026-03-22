@@ -42,3 +42,8 @@ Not: Seed içinde demo amaçlı düz metin parola kullanılıyor. Üretimde bcry
 - Tüm sorgular parameterized (`$1, $2...`).
 - Kullanıcı scope'u (`school_id`, `grade_level`, `course_id`, `teacher_id`) zorunlu filtre olarak uygulanır.
 - LLM çıktısı Zod ile doğrulanır.
+
+
+## Örnek Sorgular
+- `Sonbahar dönemi için 9. sınıf bazında derslere göre devamsızlık oranı ve öğrenci sayısını getir.` (Clarification question sorar)
+- `9. sınıf öğrenci listesi?`

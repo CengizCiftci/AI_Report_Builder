@@ -118,12 +118,12 @@ export default function DashboardPage() {
   async function handleRunReport(planOverride) {
     await runReport(planOverride || scopedPlan, false);
   }
-  
+
 
   async function handleGeneratePlan() {
     const nextPrompt = prompt.trim();
     if (!nextPrompt) {
-      setError("Lütfen rapor talebini girin.");
+      setError("Please enter a report request.");
       return;
     }
 
@@ -183,18 +183,15 @@ export default function DashboardPage() {
               <Box>
                 <Typography variant="h4">Report Planner</Typography>
                 <Typography color="text.secondary">
-                  LLM plan üretir, backend deterministic SQL üretir.
+                  LLM generates the plan, backend generates deterministic SQL.
                 </Typography>
               </Box>
               <Stack direction="row" spacing={1} alignItems="center">
                 {(user?.roles || []).map((role) => (
                   <Chip key={role} label={role} color="primary" variant="outlined" />
                 ))}
-                <Button variant="outlined" onClick={() => setDebugOpen(true)}>
-                  Debug Paneli
-                </Button>
                 <Button onClick={handleLogout} color="secondary" variant="contained">
-                  Çıkış
+                  Logout
                 </Button>
               </Stack>
             </Stack>
@@ -204,17 +201,17 @@ export default function DashboardPage() {
         <Card sx={{ backgroundColor: "var(--paper-surface)" }}>
           <CardContent>
             <Stack spacing={2}>
-              <Typography variant="h6">Doğal Dil Rapor Talebi</Typography>
+              <Typography variant="h6">Natural Language Request</Typography>
               {clarificationQuestion ? (
                 <Alert severity="info">
-                  <Typography variant="subtitle2">Ek açıklama gerekli</Typography>
+                  <Typography variant="subtitle2">Additional Information Required</Typography>
                   <Typography variant="body2">{clarificationQuestion}</Typography>
                 </Alert>
               ) : null}
               {promptHistory.length ? (
                 <Paper variant="outlined" sx={{ p: 1.5 }}>
                   <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                    Önceki Promptlar
+                    Previous Prompts
                   </Typography>
                   <Stack spacing={0.5}>
                     {promptHistory.map((item, idx) => (
@@ -232,20 +229,20 @@ export default function DashboardPage() {
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder={
                   clarificationQuestion
-                    ? "Ek açıklama/yanıt prompt'unu girin"
-                    : "Ör: Son 30 günde okul bazında devamsızlık oranı ve öğrenci sayısı"
+                    ? "Additional Information Prompt"
+                    : "Example: Absenteeism rate and student count by school in the last 30 days"
                 }
               />
               <Stack direction="row" spacing={1}>
                 <Button variant="contained" onClick={handleGeneratePlan} disabled={loadingPlan || !token}>
                   {loadingPlan
-                    ? "Plan üretiliyor..."
+                    ? "Generating Plan..."
                     : clarificationQuestion
-                      ? "Yanıtı Ekle ve Report Plan Üret"
-                      : "REPORT Plan Üret"}
+                      ? "Add Response and Generate Report Plan"
+                      : "Generate Report Plan"}
                 </Button>
                 <Button variant="outlined" onClick={handleDryRun} disabled={!scopedPlan || loadingExec || loadingPlan}>
-                  SQL Önizle (Dry Run)
+                  Dry Run SQL
                 </Button>
                 <Button
                   variant="contained"
@@ -253,11 +250,11 @@ export default function DashboardPage() {
                   onClick={handleRunReport}
                   disabled={!scopedPlan || loadingExec || loadingPlan}
                 >
-                  {loadingExec ? "Çalışıyor..." : "Raporu Çalıştır"}
+                  {loadingExec ? "Running..." : "Run Report"}
                 </Button>
                 {(clarificationQuestion || promptHistory.length) && (
                   <Button variant="text" color="inherit" onClick={handleResetPromptFlow}>
-                    Akışı Sıfırla
+                    Reset Flow
                   </Button>
                 )}
               </Stack>
@@ -271,10 +268,10 @@ export default function DashboardPage() {
           <Card sx={{ backgroundColor: "var(--paper-surface)" }}>
             <CardContent>
               <Stack spacing={2}>
-                <Typography variant="h6">Rapor Sonucu</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Teknik plan ve SQL detaylarını sağ üstteki <strong>Debug Paneli</strong> üzerinden isteğe bağlı izleyebilirsiniz.
-                </Typography>
+                <Typography variant="h6">Report Result</Typography>
+                <Button variant="outlined" onClick={() => setDebugOpen(true)}>
+                  Report Plan Panel
+                </Button>
                 <Divider />
                 {execResult.rows?.length ? (
                   <Table size="small">
@@ -297,7 +294,7 @@ export default function DashboardPage() {
                   </Table>
                 ) : (
                   <Typography variant="body2" color="text.secondary">
-                    Dry run veya boş sonuç döndü.
+                    Dry run or empty result returned.
                   </Typography>
                 )}
               </Stack>
@@ -310,18 +307,18 @@ export default function DashboardPage() {
         <Box sx={{ width: { xs: "100vw", sm: 520 }, p: 2 }}>
           <Stack spacing={2}>
             <Stack direction="row" alignItems="center" justifyContent="space-between">
-              <Typography variant="h6">Debug Paneli</Typography>
-              <IconButton onClick={() => setDebugOpen(false)} aria-label="debug panelini kapat">
+              <Typography variant="h6">Report Plan Panel</Typography>
+              <IconButton onClick={() => setDebugOpen(false)} aria-label="Close Report Plan Panel">
                 <CloseIcon />
               </IconButton>
             </Stack>
             <Typography variant="body2" color="text.secondary">
-              Bu panelde planlama ve SQL üretim adımlarının ham çıktıları yer alır.
+              This panel contains the raw outputs of the planning and SQL generation steps.
             </Typography>
             <Divider />
 
             <JsonPreview title="LLM Draft Plan (planResult?.plan)" data={planResult?.plan} />
-            <JsonPreview title="Scope Uygulanmış Plan (planResult?.scopedPlan)" data={planResult?.scopedPlan} />
+            <JsonPreview title="Scoped Plan (planResult?.scopedPlan)" data={planResult?.scopedPlan} />
 
             <Paper
               variant="outlined"
@@ -330,10 +327,10 @@ export default function DashboardPage() {
               <Typography variant="subtitle2" sx={{ mb: 1, color: "#94a3b8" }}>
                 SQL (execResult.sql)
               </Typography>
-              <pre style={{ margin: 0, fontSize: 12 }}>{execResult?.sql || "Henüz SQL üretilmedi."}</pre>
+              <pre style={{ margin: 0, fontSize: 12 }}>{execResult?.sql || "SQL not yet generated."}</pre>
             </Paper>
 
-            <JsonPreview title="SQL Parametreleri (execResult.params)" data={execResult?.params || []} />
+            <JsonPreview title="SQL Parameters (execResult.params)" data={execResult?.params || []} />
           </Stack>
         </Box>
       </Drawer>
