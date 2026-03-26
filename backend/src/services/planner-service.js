@@ -13,6 +13,7 @@ function buildSystemPrompt(dictionary, user) {
     "If request is ambiguous, add clarificationQuestion.",
     "Respect user scope by keeping requested entities/filters compatible.",
     "Output only valid JSON matching the schema.",
+    "Request exact dates when user asks for date ranges without specifying them, don't accept informal date descriptions like 'today' or 'yesterday', or `last month`.",
     "--- DICTIONARY ---",
     JSON.stringify(dictionary),
     "--- USER CONTEXT ---",

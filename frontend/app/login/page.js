@@ -46,26 +46,26 @@ export default function LoginPage() {
           <Stack spacing={2}>
             <Typography variant="h4">SQL Builder</Typography>
             <Typography color="text.secondary">
-              Doğal dil rapor talebini REPORT Plan'a dönüştürüp güvenli SQL üreten demo arayüz.
+              Demo interface that converts natural language report requests into REPORT Plans and generates secure SQL.
             </Typography>
             {error ? <Alert severity="error">{error}</Alert> : null}
             <Box component="form" onSubmit={handleSubmit}>
               <Stack spacing={2}>
                 <TextField
-                  label="Kullanıcı adı"
+                  label="Username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
                 />
                 <TextField
-                  label="Parola"
+                  label="Password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
                 <Button type="submit" variant="contained" size="large" disabled={loading}>
-                  {loading ? "Giriş yapılıyor..." : "Giriş Yap"}
+                  {loading ? "Logging in..." : "Log In"}
                 </Button>
               </Stack>
             </Box>

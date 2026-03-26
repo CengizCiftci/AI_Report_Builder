@@ -21,12 +21,17 @@ import {
   TableHead,
   TableRow,
   TextField,
-  Typography
+  Typography,
+  TableContainer,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { createReportPlan, executeReport } from "@/lib/api";
 
-function composePlannerPrompt(promptHistory, latestPrompt, clarificationQuestion) {
+function composePlannerPrompt(
+  promptHistory,
+  latestPrompt,
+  clarificationQuestion,
+) {
   const prompts = [...promptHistory, latestPrompt]
     .map((item) => item.trim())
     .filter(Boolean);
@@ -38,7 +43,7 @@ function composePlannerPrompt(promptHistory, latestPrompt, clarificationQuestion
 
   if (clarificationQuestion) {
     lines.push(
-      `The latest user prompt is an answer to this clarification question: ${clarificationQuestion}`
+      `The latest user prompt is an answer to this clarification question: ${clarificationQuestion}`,
     );
   }
 
@@ -49,11 +54,21 @@ function JsonPreview({ title, data }) {
   if (!data) return null;
 
   return (
-    <Paper variant="outlined" sx={{ p: 2, backgroundColor: "#0f172a", color: "#e2e8f0", overflowX: "auto" }}>
+    <Paper
+      variant="outlined"
+      sx={{
+        p: 2,
+        backgroundColor: "#0f172a",
+        color: "#e2e8f0",
+        overflowX: "auto",
+      }}
+    >
       <Typography variant="subtitle2" sx={{ mb: 1, color: "#94a3b8" }}>
         {title}
       </Typography>
-      <pre style={{ margin: 0, fontSize: 12 }}>{JSON.stringify(data, null, 2)}</pre>
+      <pre style={{ margin: 0, fontSize: 12 }}>
+        {JSON.stringify(data, null, 2)}
+      </pre>
     </Paper>
   );
 }
@@ -63,7 +78,7 @@ export default function DashboardPage() {
   const [token, setToken] = useState("");
   const [user, setUser] = useState(null);
   const [prompt, setPrompt] = useState(
-    "Sonbahar dönemi için 9. sınıf bazında derslere göre devamsızlık oranı ve öğrenci sayısını getir."
+    "Example: Absenteeism rate and student count by school in the last 30 days",
   );
   const [planResult, setPlanResult] = useState(null);
   const [execResult, setExecResult] = useState(null);
@@ -96,10 +111,6 @@ export default function DashboardPage() {
     return Object.keys(execResult.rows[0]);
   }, [execResult]);
 
-  async function handleDryRun() {
-    await runReport(scopedPlan, true);
-  }
-
   async function runReport(plan, dryRun = false) {
     if (!plan) return;
     setLoadingExec(true);
@@ -119,7 +130,6 @@ export default function DashboardPage() {
     await runReport(planOverride || scopedPlan, false);
   }
 
-
   async function handleGeneratePlan() {
     const nextPrompt = prompt.trim();
     if (!nextPrompt) {
@@ -135,7 +145,7 @@ export default function DashboardPage() {
       const plannerPrompt = composePlannerPrompt(
         promptHistory,
         nextPrompt,
-        clarificationQuestion
+        clarificationQuestion,
       );
 
       const result = await createReportPlan(token, plannerPrompt);
@@ -177,9 +187,18 @@ export default function DashboardPage() {
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
       <Stack spacing={3}>
-        <Card sx={{ backdropFilter: "blur(8px)", backgroundColor: "var(--paper-surface)" }}>
+        <Card
+          sx={{
+            backdropFilter: "blur(8px)",
+            backgroundColor: "var(--paper-surface)",
+          }}
+        >
           <CardContent>
-            <Stack direction={{ xs: "column", md: "row" }} spacing={2} justifyContent="space-between">
+            <Stack
+              direction={{ xs: "column", md: "row" }}
+              spacing={2}
+              justifyContent="space-between"
+            >
               <Box>
                 <Typography variant="h4">Report Planner</Typography>
                 <Typography color="text.secondary">
@@ -188,9 +207,18 @@ export default function DashboardPage() {
               </Box>
               <Stack direction="row" spacing={1} alignItems="center">
                 {(user?.roles || []).map((role) => (
-                  <Chip key={role} label={role} color="primary" variant="outlined" />
+                  <Chip
+                    key={role}
+                    label={role}
+                    color="primary"
+                    variant="outlined"
+                  />
                 ))}
-                <Button onClick={handleLogout} color="secondary" variant="contained">
+                <Button
+                  onClick={handleLogout}
+                  color="secondary"
+                  variant="contained"
+                >
                   Logout
                 </Button>
               </Stack>
@@ -204,8 +232,12 @@ export default function DashboardPage() {
               <Typography variant="h6">Natural Language Request</Typography>
               {clarificationQuestion ? (
                 <Alert severity="info">
-                  <Typography variant="subtitle2">Additional Information Required</Typography>
-                  <Typography variant="body2">{clarificationQuestion}</Typography>
+                  <Typography variant="subtitle2">
+                    Additional Information Required
+                  </Typography>
+                  <Typography variant="body2">
+                    {clarificationQuestion}
+                  </Typography>
                 </Alert>
               ) : null}
               {promptHistory.length ? (
@@ -215,7 +247,11 @@ export default function DashboardPage() {
                   </Typography>
                   <Stack spacing={0.5}>
                     {promptHistory.map((item, idx) => (
-                      <Typography key={`${idx}-${item}`} variant="body2" color="text.secondary">
+                      <Typography
+                        key={`${idx}-${item}`}
+                        variant="body2"
+                        color="text.secondary"
+                      >
                         {idx + 1}. {item}
                       </Typography>
                     ))}
@@ -234,29 +270,26 @@ export default function DashboardPage() {
                 }
               />
               <Stack direction="row" spacing={1}>
-                <Button variant="contained" onClick={handleGeneratePlan} disabled={loadingPlan || !token}>
+                <Button
+                  variant="contained"
+                  onClick={handleGeneratePlan}
+                  disabled={loadingPlan || !token}
+                >
                   {loadingPlan
                     ? "Generating Plan..."
                     : clarificationQuestion
                       ? "Add Response and Generate Report Plan"
                       : "Generate Report Plan"}
                 </Button>
-                <Button variant="outlined" onClick={handleDryRun} disabled={!scopedPlan || loadingExec || loadingPlan}>
-                  Dry Run SQL
-                </Button>
-                <Button
-                  variant="contained"
-                  color="secondary"
-                  onClick={handleRunReport}
-                  disabled={!scopedPlan || loadingExec || loadingPlan}
-                >
-                  {loadingExec ? "Running..." : "Run Report"}
-                </Button>
-                {(clarificationQuestion || promptHistory.length) && (
-                  <Button variant="text" color="inherit" onClick={handleResetPromptFlow}>
+                {clarificationQuestion || promptHistory.length ? (
+                  <Button
+                    variant="text"
+                    color="inherit"
+                    onClick={handleResetPromptFlow}
+                  >
                     Reset Flow
                   </Button>
-                )}
+                ) : null}
               </Stack>
             </Stack>
           </CardContent>
@@ -267,70 +300,134 @@ export default function DashboardPage() {
         {execResult ? (
           <Card sx={{ backgroundColor: "var(--paper-surface)" }}>
             <CardContent>
-              <Stack spacing={2}>
-                <Typography variant="h6">Report Result</Typography>
-                <Button variant="outlined" onClick={() => setDebugOpen(true)}>
-                  Report Plan Panel
-                </Button>
-                <Divider />
-                {execResult.rows?.length ? (
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        {tableColumns.map((column) => (
-                          <TableCell key={column}>{column}</TableCell>
-                        ))}
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {execResult.rows.map((row, idx) => (
-                        <TableRow key={idx}>
+              {/* Header */}
+              <Stack
+                direction="row"
+                spacing={2}
+                alignItems="center"
+                sx={{ mb: 2 }}
+              >
+                <Box>
+                  <Typography variant="h6">Report Result</Typography>
+
+                  <Typography color="text.secondary">
+                    Total rows: {execResult.rows?.length ?? 0}
+                  </Typography>
+                </Box>
+                <Box sx={{ ml: "auto" }}>
+                  <Button variant="outlined" onClick={() => setDebugOpen(true)}>
+                    Report Plan Panel
+                  </Button>
+                </Box>
+              </Stack>
+              <Divider sx={{ mb: 2 }} />
+
+              {/* Table Area */}
+              {execResult.rows?.length ? (
+                <Box
+                  sx={{
+                    mt: 1,
+                    p: 1,
+                    border: "1px solid",
+                    borderColor: "divider",
+                    borderRadius: 2,
+                    overflowX: "auto",
+                    backgroundColor: "background.paper",
+                  }}
+                >
+                  <TableContainer
+                    component={Paper}
+                    variant="outlined"
+                    sx={{ mt: 2, borderRadius: 2 }}
+                  >
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
                           {tableColumns.map((column) => (
-                            <TableCell key={`${idx}-${column}`}>{String(row[column])}</TableCell>
+                            <TableCell key={column}>{column}</TableCell>
                           ))}
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    Dry run or empty result returned.
-                  </Typography>
-                )}
-              </Stack>
+                      </TableHead>
+                      <TableBody>
+                        {execResult.rows.map((row, idx) => (
+                          <TableRow key={idx}>
+                            {tableColumns.map((column) => (
+                              <TableCell key={`${idx}-${column}`}>
+                                {String(row[column])}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Box>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  Empty result returned.
+                </Typography>
+              )}
             </CardContent>
           </Card>
         ) : null}
       </Stack>
 
-      <Drawer anchor="right" open={debugOpen} onClose={() => setDebugOpen(false)}>
+      <Drawer
+        anchor="right"
+        open={debugOpen}
+        onClose={() => setDebugOpen(false)}
+      >
         <Box sx={{ width: { xs: "100vw", sm: 520 }, p: 2 }}>
           <Stack spacing={2}>
-            <Stack direction="row" alignItems="center" justifyContent="space-between">
+            <Stack
+              direction="row"
+              alignItems="center"
+              justifyContent="space-between"
+            >
               <Typography variant="h6">Report Plan Panel</Typography>
-              <IconButton onClick={() => setDebugOpen(false)} aria-label="Close Report Plan Panel">
+              <IconButton
+                onClick={() => setDebugOpen(false)}
+                aria-label="Close Report Plan Panel"
+              >
                 <CloseIcon />
               </IconButton>
             </Stack>
             <Typography variant="body2" color="text.secondary">
-              This panel contains the raw outputs of the planning and SQL generation steps.
+              This panel contains the raw outputs of the planning and SQL
+              generation steps.
             </Typography>
             <Divider />
 
-            <JsonPreview title="LLM Draft Plan (planResult?.plan)" data={planResult?.plan} />
-            <JsonPreview title="Scoped Plan (planResult?.scopedPlan)" data={planResult?.scopedPlan} />
+            <JsonPreview
+              title="LLM Draft Plan (planResult?.plan)"
+              data={planResult?.plan}
+            />
+            <JsonPreview
+              title="Scoped Plan (planResult?.scopedPlan)"
+              data={planResult?.scopedPlan}
+            />
 
             <Paper
               variant="outlined"
-              sx={{ p: 2, backgroundColor: "#020617", color: "#e2e8f0", overflowX: "auto" }}
+              sx={{
+                p: 2,
+                backgroundColor: "#020617",
+                color: "#e2e8f0",
+                overflowX: "auto",
+              }}
             >
               <Typography variant="subtitle2" sx={{ mb: 1, color: "#94a3b8" }}>
                 SQL (execResult.sql)
               </Typography>
-              <pre style={{ margin: 0, fontSize: 12 }}>{execResult?.sql || "SQL not yet generated."}</pre>
+              <pre style={{ margin: 0, fontSize: 12 }}>
+                {execResult?.sql || "SQL not yet generated."}
+              </pre>
             </Paper>
 
-            <JsonPreview title="SQL Parameters (execResult.params)" data={execResult?.params || []} />
+            <JsonPreview
+              title="SQL Parameters (execResult.params)"
+              data={execResult?.params || []}
+            />
           </Stack>
         </Box>
       </Drawer>

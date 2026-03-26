@@ -12,7 +12,7 @@ const COLUMN_SQL = {
   teacher_name: "t.full_name",
   student_id: "st.id",
   student_name: "st.full_name",
-  attendance_date: "a.attendance_date"
+  attendance_date: "a.attendance_date",
 };
 
 const METRIC_SQL = {
@@ -21,7 +21,7 @@ const METRIC_SQL = {
   total_days: "SUM(a.total_days)",
   attendance_rate:
     "CASE WHEN SUM(a.total_days) = 0 THEN 0 ELSE ROUND((SUM(a.present_days)::numeric / SUM(a.total_days)::numeric) * 100, 2) END",
-  record_count: "COUNT(*)"
+  record_count: "COUNT(*)",
 };
 
 const FILTERABLE_FIELDS = new Set(Object.keys(COLUMN_SQL));
@@ -85,7 +85,10 @@ function appendFilterSql(filter, params, whereParts) {
     case "IN":
     case "NOT IN": {
       if (!Array.isArray(filter.value) || !filter.value.length) {
-        throw new HttpError(400, `${filter.operator} expects a non-empty array`);
+        throw new HttpError(
+          400,
+          `${filter.operator} expects a non-empty array`,
+        );
       }
       params.push(filter.value);
       const op = filter.operator === "IN" ? "= ANY" : "!= ALL";
@@ -99,7 +102,9 @@ function appendFilterSql(filter, params, whereParts) {
       }
       params.push(filter.value[0]);
       params.push(filter.value[1]);
-      whereParts.push(`${fieldExpr} BETWEEN $${params.length - 1} AND $${params.length}`);
+      whereParts.push(
+        `${fieldExpr} BETWEEN $${params.length - 1} AND $${params.length}`,
+      );
       return;
     }
 
@@ -111,17 +116,19 @@ function appendFilterSql(filter, params, whereParts) {
 function buildSql(plan) {
   const dimensions = plan.columns.map((field) => ({
     field,
-    expression: toExpression(field)
+    expression: toExpression(field),
   }));
 
-  const metrics = (plan.metrics || []).map((metric) => buildMetricExpression(metric));
+  const metrics = (plan.metrics || []).map((metric) =>
+    buildMetricExpression(metric),
+  );
   if (!metrics.length) {
     metrics.push(`${METRIC_SQL.record_count} AS record_count`);
   }
 
   const selectParts = [
     ...dimensions.map((dim) => `${dim.expression} AS ${dim.field}`),
-    ...metrics
+    ...metrics,
   ];
 
   const whereParts = [];
@@ -134,12 +141,13 @@ function buildSql(plan) {
   let sql = `
     SELECT
       ${selectParts.join(",\n      ")}
-    FROM attendance_daily a
-    JOIN students st ON st.id = a.student_id
-    JOIN sections sec ON sec.id = a.section_id
-    JOIN schools sch ON sch.id = st.school_id
-    LEFT JOIN courses c ON c.id = sec.course_id
-    LEFT JOIN teachers t ON t.id = sec.teacher_id
+    FROM schools sch  
+	JOIN students st ON sch.id = st.school_id
+	LEFT JOIN enrollments en ON en.student_id = st.id
+	LEFT JOIN sections sec ON sec.id = en.section_id 
+	LEFT JOIN courses c ON c.id = sec.course_id
+	LEFT JOIN teachers t ON t.id = sec.teacher_id
+	LEFT JOIN attendance_daily a ON a.student_id = en.student_id AND a.section_id = en.section_id
   `;
 
   if (whereParts.length) {
@@ -153,7 +161,7 @@ function buildSql(plan) {
   const sortableAliases = new Set([
     ...plan.columns,
     ...(plan.metrics || []).map((metric) => metric.name),
-    "record_count"
+    "record_count",
   ]);
 
   const orderParts = [];
@@ -174,5 +182,5 @@ function buildSql(plan) {
 }
 
 module.exports = {
-  buildSql
+  buildSql,
 };

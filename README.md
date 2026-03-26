@@ -45,5 +45,22 @@ Not: Seed içinde demo amaçlı düz metin parola kullanılıyor. Üretimde bcry
 
 
 ## Örnek Sorgular
+
+- `List schools`
+
+- `List students by grade, course session, and school` 
+
+- `List of 9th grade students`
+   |- **call for admin and teachers separetly. It should return different results**
+
+- `For the fall semester, provide the attendance rate and the number of students by course for 9th grade.` (Clarification question for fall semester)
+   |- **will ask for exact date range, won't accept informal description**
+
+- `For the fall semester, provide the absenteeism rate and the number of students by course for 9th grade.` (Clarification question sorar)
+   |- **Unsupported metric: absenteeism_rate**
+
+
+## Örnek Sorgular Turkce
+- `9. sınıf öğrenci listesi`
+
 - `Sonbahar dönemi için 9. sınıf bazında derslere göre devamsızlık oranı ve öğrenci sayısını getir.` (Clarification question sorar)
-- `9. sınıf öğrenci listesi?`
