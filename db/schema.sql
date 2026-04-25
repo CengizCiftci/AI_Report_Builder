@@ -91,8 +91,24 @@ CREATE TABLE IF NOT EXISTS report_plans (
   raw_plan JSONB NOT NULL,
   scoped_plan JSONB NOT NULL,
   status TEXT NOT NULL DEFAULT 'generated',
+  confidence NUMERIC(4,3),
+  validation_errors JSONB NOT NULL DEFAULT '[]'::jsonb,
+  audit_log JSONB NOT NULL DEFAULT '[]'::jsonb,
+  planner_source TEXT NOT NULL DEFAULT 'unknown',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE IF EXISTS report_plans
+  ADD COLUMN IF NOT EXISTS confidence NUMERIC(4,3);
+
+ALTER TABLE IF EXISTS report_plans
+  ADD COLUMN IF NOT EXISTS validation_errors JSONB NOT NULL DEFAULT '[]'::jsonb;
+
+ALTER TABLE IF EXISTS report_plans
+  ADD COLUMN IF NOT EXISTS audit_log JSONB NOT NULL DEFAULT '[]'::jsonb;
+
+ALTER TABLE IF EXISTS report_plans
+  ADD COLUMN IF NOT EXISTS planner_source TEXT NOT NULL DEFAULT 'unknown';
 
 CREATE INDEX IF NOT EXISTS idx_report_plans_user_id ON report_plans(user_id);
 CREATE INDEX IF NOT EXISTS idx_report_plans_created_at ON report_plans(created_at DESC);

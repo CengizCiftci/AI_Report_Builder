@@ -1,0 +1,11 @@
+ALTER TABLE IF EXISTS report_plans
+  ADD COLUMN IF NOT EXISTS confidence NUMERIC(4,3);
+
+ALTER TABLE IF EXISTS report_plans
+  ADD COLUMN IF NOT EXISTS validation_errors JSONB NOT NULL DEFAULT '[]'::jsonb;
+
+ALTER TABLE IF EXISTS report_plans
+  ADD COLUMN IF NOT EXISTS audit_log JSONB NOT NULL DEFAULT '[]'::jsonb;
+
+ALTER TABLE IF EXISTS report_plans
+  ADD COLUMN IF NOT EXISTS planner_source TEXT NOT NULL DEFAULT 'unknown';

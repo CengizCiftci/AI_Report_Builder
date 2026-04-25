@@ -406,6 +406,12 @@ export default function DashboardPage() {
               title="Scoped Plan (planResult?.scopedPlan)"
               data={planResult?.scopedPlan}
             />
+            <JsonPreview title="Plan Confidence" data={planResult?.confidence} />
+            <JsonPreview
+              title="Validation Errors"
+              data={planResult?.validationErrors}
+            />
+            <JsonPreview title="Audit Log" data={planResult?.auditLog} />
 
             <Paper
               variant="outlined"

@@ -19,21 +19,59 @@ router.post("/plan", authenticate, async (req, res, next) => {
       .parse(req.body);
 
     const dictionary = await getDictionary();
-    const draftPlan = await generateReportPlan({
+    const plannerResult = await generateReportPlan({
       prompt: body.prompt,
       dictionary,
       user: req.user
     });
+    const draftPlan = plannerResult.plan;
+    const metadata = plannerResult.metadata || {};
 
     const scopedPlan = applyScopeToPlan(draftPlan, req.user);
+    const scopeAuditEvent = {
+      at: new Date().toISOString(),
+      step: "scope_applied",
+      status: "ok",
+      details: {
+        originalFilterCount: draftPlan.filters?.length || 0,
+        scopedFilterCount: scopedPlan.filters?.length || 0
+      }
+    };
+    const auditLog = [...(metadata.auditLog || []), scopeAuditEvent];
+    const validationErrors = metadata.validationErrors || [];
+    const confidence = metadata.confidence ?? draftPlan.confidence ?? null;
+    const plannerSource = metadata.source || "unknown";
+    const status = validationErrors.some((v) => v.severity === "error")
+      ? "needs_review"
+      : "generated";
 
     try {
       await query(
         `
-        INSERT INTO report_plans (user_id, prompt, raw_plan, scoped_plan, status)
-        VALUES ($1, $2, $3::jsonb, $4::jsonb, 'generated')
+        INSERT INTO report_plans (
+          user_id,
+          prompt,
+          raw_plan,
+          scoped_plan,
+          status,
+          confidence,
+          validation_errors,
+          audit_log,
+          planner_source
+        )
+        VALUES ($1, $2, $3::jsonb, $4::jsonb, $5, $6, $7::jsonb, $8::jsonb, $9)
         `,
-        [req.user.sub, body.prompt, JSON.stringify(draftPlan), JSON.stringify(scopedPlan)]
+        [
+          req.user.sub,
+          body.prompt,
+          JSON.stringify(draftPlan),
+          JSON.stringify(scopedPlan),
+          status,
+          confidence,
+          JSON.stringify(validationErrors),
+          JSON.stringify(auditLog),
+          plannerSource
+        ]
       );
     } catch (error) {
       console.warn("report_plans save skipped:", error.message);
@@ -41,7 +79,12 @@ router.post("/plan", authenticate, async (req, res, next) => {
 
     return res.json({
       plan: draftPlan,
-      scopedPlan
+      scopedPlan,
+      confidence,
+      validationErrors,
+      auditLog,
+      plannerSource,
+      status
     });
   } catch (error) {
     return next(error);

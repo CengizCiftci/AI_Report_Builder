@@ -5,6 +5,145 @@ const {
   REPORT_PLAN_JSON_SCHEMA
 } = require("../utils/report-plan-schema");
 
+function addAuditLog(auditLog, step, status, details = {}) {
+  auditLog.push({
+    at: new Date().toISOString(),
+    step,
+    status,
+    details
+  });
+}
+
+function normalizeAndParsePlan(rawPlan) {
+  const normalized = normalizePlan(rawPlan);
+  return ReportPlanSchema.parse(normalized);
+}
+
+function toDictionarySets(dictionary) {
+  const fieldKeys = new Set((dictionary?.fields || []).map((f) => f.field_key));
+  const metricKeys = new Set((dictionary?.metrics || []).map((m) => m.key));
+  return { fieldKeys, metricKeys };
+}
+
+function collectValidationErrors(plan, dictionary) {
+  const { fieldKeys, metricKeys } = toDictionarySets(dictionary);
+  const issues = [];
+
+  for (const column of plan.columns || []) {
+    if (!fieldKeys.has(column)) {
+      issues.push({
+        code: "UNKNOWN_COLUMN",
+        severity: "error",
+        field: "columns",
+        value: column,
+        message: `Column "${column}" is not in dictionary field whitelist.`
+      });
+    }
+  }
+
+  for (const filter of plan.filters || []) {
+    if (!fieldKeys.has(filter.field)) {
+      issues.push({
+        code: "UNKNOWN_FILTER_FIELD",
+        severity: "error",
+        field: "filters",
+        value: filter.field,
+        message: `Filter field "${filter.field}" is not in dictionary field whitelist.`
+      });
+    }
+
+    if (filter.operator === "BETWEEN") {
+      const values = Array.isArray(filter.value) ? filter.value : [];
+      const isIsoDate =
+        values.length === 2 &&
+        values.every(
+          (value) => typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)
+        );
+
+      if (values.length === 2 && !isIsoDate) {
+        issues.push({
+          code: "NON_ISO_DATE_RANGE",
+          severity: "warning",
+          field: "filters",
+          value: filter.value,
+          message: "BETWEEN date range should use ISO format (YYYY-MM-DD)."
+        });
+      }
+    }
+  }
+
+  for (const metric of plan.metrics || []) {
+    if (metricKeys.has(metric.name)) continue;
+
+    if (!metric.aggregation || !metric.field) {
+      issues.push({
+        code: "UNKNOWN_METRIC_DEFINITION",
+        severity: "error",
+        field: "metrics",
+        value: metric.name,
+        message: `Metric "${metric.name}" is unknown and missing aggregation/field mapping.`
+      });
+      continue;
+    }
+
+    if (!fieldKeys.has(metric.field)) {
+      issues.push({
+        code: "UNKNOWN_METRIC_FIELD",
+        severity: "error",
+        field: "metrics",
+        value: metric.field,
+        message: `Metric field "${metric.field}" is not in dictionary field whitelist.`
+      });
+    }
+  }
+
+  const sortableAliases = new Set([
+    ...(plan.columns || []),
+    ...((plan.metrics || []).map((metric) => metric.name))
+  ]);
+
+  for (const sort of plan.sort || []) {
+    if (!sortableAliases.has(sort.field)) {
+      issues.push({
+        code: "UNKNOWN_SORT_FIELD",
+        severity: "warning",
+        field: "sort",
+        value: sort.field,
+        message: `Sort field "${sort.field}" is not present in selected columns/metrics.`
+      });
+    }
+  }
+
+  return issues;
+}
+
+function computeConfidence(plan, validationErrors, source) {
+  const modelConfidence =
+    typeof plan.confidence === "number" &&
+    !Number.isNaN(plan.confidence) &&
+    plan.confidence >= 0 &&
+    plan.confidence <= 1
+      ? plan.confidence
+      : null;
+
+  let score = modelConfidence ?? (source === "fallback" ? 0.5 : 0.72);
+
+  if (plan.clarificationQuestion) score -= 0.2;
+
+  const errorCount = validationErrors.filter((issue) => issue.severity === "error").length;
+  const warningCount = validationErrors.filter((issue) => issue.severity === "warning").length;
+
+  score -= errorCount * 0.18;
+  score -= warningCount * 0.07;
+
+  if ((plan.metrics || []).length === 0) score -= 0.08;
+  if ((plan.columns || []).length < 2) score -= 0.05;
+  if ((plan.filters || []).length === 0) score -= 0.03;
+
+  const bounded = Math.min(0.99, Math.max(0.05, score));
+  return Number(bounded.toFixed(2));
+}
+
 function buildSystemPrompt(dictionary, user) {
   return [
     "You are a report planner that converts natural language requests into a strict REPORT Plan JSON.",
@@ -51,6 +190,7 @@ function buildFallbackPlan(prompt) {
     filters: [],
     sort: [{ field: "student_count", direction: "DESC" }],
     limit: 100,
+    clarificationQuestion: null,
     confidence: 0.45
   };
 
@@ -86,7 +226,11 @@ function extractResponseText(responseJson) {
   return chunks.join("\n").trim();
 }
 
-async function callOpenAIPlanner({ prompt, dictionary, user }) {
+async function callOpenAIPlanner({ prompt, dictionary, user, auditLog }) {
+  addAuditLog(auditLog, "openai_request_started", "ok", {
+    model: env.OPENAI_MODEL
+  });
+
   const body = {
     model: env.OPENAI_MODEL,
     input: [
@@ -109,12 +253,6 @@ async function callOpenAIPlanner({ prompt, dictionary, user }) {
     }
   };
 
-  // console.log("User:", JSON.stringify(user, null, 2));
-  // console.log(' << -------------------------------------------------------------------- >>');
-  // console.log("Prompt:", prompt);
-  // console.log(' << -------------------------------------------------------------------- >>');
-  // console.log("Dictionary:", JSON.stringify(dictionary, null, 2));
-
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: {
@@ -126,37 +264,89 @@ async function callOpenAIPlanner({ prompt, dictionary, user }) {
 
   if (!response.ok) {
     const errorText = await response.text();
+    addAuditLog(auditLog, "openai_request_failed", "error", {
+      status: response.status,
+      error: errorText
+    });
     throw new Error(`OpenAI error: ${response.status} ${errorText}`);
   }
 
   const data = await response.json();
   const text = extractResponseText(data);
   if (!text) {
+    addAuditLog(auditLog, "openai_empty_output", "error");
     throw new Error("OpenAI returned empty response");
   }
 
+  addAuditLog(auditLog, "openai_response_received", "ok", {
+    outputLength: text.length
+  });
 
   const raw = JSON.parse(text);
-  const normalized = normalizePlan(raw);
-  const parsed = ReportPlanSchema.parse(normalized);
+  addAuditLog(auditLog, "openai_json_parsed", "ok");
 
-  // const parsed = JSON.parse(text);
-  return ReportPlanSchema.parse(parsed);
+  const parsed = normalizeAndParsePlan(raw);
+  addAuditLog(auditLog, "schema_validation_passed", "ok");
+
+  return parsed;
 }
 
 async function generateReportPlan({ prompt, dictionary, user }) {
-  //TODO: Remove this hardcoded fallback after completing development in frontend.
-  // return ReportPlanSchema.parse(buildFallbackPlan(prompt));
-  if (!env.OPENAI_API_KEY) {
-    return ReportPlanSchema.parse(buildFallbackPlan(prompt));
-  }
+  const auditLog = [];
+  addAuditLog(auditLog, "request_received", "ok", {
+    promptLength: prompt.length
+  });
+
+  let plan;
+  let source = "openai";
 
   try {
-    return await callOpenAIPlanner({ prompt, dictionary, user });
+    if (!env.OPENAI_API_KEY) {
+      source = "fallback";
+      addAuditLog(auditLog, "fallback_used", "warning", {
+        reason: "OPENAI_API_KEY_NOT_SET"
+      });
+      plan = normalizeAndParsePlan(buildFallbackPlan(prompt));
+    } else {
+      plan = await callOpenAIPlanner({ prompt, dictionary, user, auditLog });
+    }
   } catch (error) {
+    source = "fallback";
     console.error("Planner fallback due to OpenAI issue:", error.message);
-    return ReportPlanSchema.parse(buildFallbackPlan(prompt));
+    addAuditLog(auditLog, "fallback_used", "warning", {
+      reason: "OPENAI_CALL_FAILED",
+      error: error.message
+    });
+    plan = normalizeAndParsePlan(buildFallbackPlan(prompt));
   }
+
+  const validationErrors = collectValidationErrors(plan, dictionary);
+  addAuditLog(auditLog, "plan_semantic_validation", "ok", {
+    total: validationErrors.length,
+    errors: validationErrors.filter((issue) => issue.severity === "error").length,
+    warnings: validationErrors.filter((issue) => issue.severity === "warning").length
+  });
+
+  const confidence = computeConfidence(plan, validationErrors, source);
+  const finalizedPlan = {
+    ...plan,
+    confidence
+  };
+
+  addAuditLog(auditLog, "confidence_computed", "ok", {
+    confidence,
+    source
+  });
+
+  return {
+    plan: finalizedPlan,
+    metadata: {
+      confidence,
+      validationErrors,
+      auditLog,
+      source
+    }
+  };
 }
 
 module.exports = {
