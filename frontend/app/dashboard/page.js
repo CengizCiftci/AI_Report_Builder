@@ -27,7 +27,12 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import MicIcon from "@mui/icons-material/Mic";
 import StopCircleIcon from "@mui/icons-material/StopCircle";
-import { createReportPlan, executeReport, transcribeAudio } from "@/lib/api";
+import {
+  createReportPlan,
+  executeReport,
+  getReportHistory,
+  transcribeAudio
+} from "@/lib/api";
 
 function composePlannerPrompt(
   promptHistory,
@@ -90,6 +95,14 @@ export default function DashboardPage() {
   const [debugOpen, setDebugOpen] = useState(false);
   const [clarificationQuestion, setClarificationQuestion] = useState("");
   const [promptHistory, setPromptHistory] = useState([]);
+  const [historyItems, setHistoryItems] = useState([]);
+  const [historyPagination, setHistoryPagination] = useState({
+    limit: 20,
+    offset: 0,
+    total: 0,
+    hasMore: false
+  });
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const [voiceState, setVoiceState] = useState("idle");
   const mediaRecorderRef = useRef(null);
   const mediaStreamRef = useRef(null);
@@ -126,12 +139,50 @@ export default function DashboardPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!token) return;
+    loadHistory({ silent: true });
+  }, [token]);
+
   const scopedPlan = planResult?.scopedPlan;
 
   const tableColumns = useMemo(() => {
     if (!execResult?.rows?.length) return [];
     return Object.keys(execResult.rows[0]);
   }, [execResult]);
+
+  function formatTimestamp(value) {
+    if (!value) return "-";
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return String(value);
+    return parsed.toLocaleString();
+  }
+
+  async function loadHistory({ silent = false, offset = 0 } = {}) {
+    if (!token) return;
+    if (!silent) setLoadingHistory(true);
+
+    try {
+      const response = await getReportHistory(token, {
+        limit: historyPagination.limit,
+        offset
+      });
+      const items = response?.items || [];
+      const pagination = response?.pagination || {
+        limit: historyPagination.limit,
+        offset: 0,
+        total: items.length,
+        hasMore: false
+      };
+
+      setHistoryPagination(pagination);
+      setHistoryItems((prev) => (offset > 0 ? [...prev, ...items] : items));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      if (!silent) setLoadingHistory(false);
+    }
+  }
 
   async function runReport(plan, dryRun = false) {
     if (!plan) return;
@@ -172,6 +223,7 @@ export default function DashboardPage() {
 
       const result = await createReportPlan(token, plannerPrompt);
       setPlanResult(result);
+      await loadHistory({ silent: true });
 
       const nextClarificationQuestion =
         result?.plan?.clarificationQuestion?.trim() || "";
@@ -191,6 +243,30 @@ export default function DashboardPage() {
     } finally {
       setLoadingPlan(false);
     }
+  }
+
+  function handleUseHistoryPrompt(item) {
+    setPrompt(item?.prompt || "");
+    setPromptHistory([]);
+    setClarificationQuestion("");
+    setError("");
+  }
+
+  function handleReviewHistory(item) {
+    if (!item) return;
+    setPlanResult({
+      plan: item.rawPlan,
+      scopedPlan: item.scopedPlan,
+      confidence: item.confidence,
+      validationErrors: item.validationErrors,
+      auditLog: item.auditLog
+    });
+    setDebugOpen(true);
+  }
+
+  async function handleRerunHistory(item) {
+    if (!item?.scopedPlan) return;
+    await handleRunReport(item.scopedPlan);
   }
 
   function stopActiveStream() {
@@ -433,6 +509,124 @@ export default function DashboardPage() {
                 <Typography variant="body2" color="error">
                   Listening... click Stop Recording when you finish speaking.
                 </Typography>
+              ) : null}
+            </Stack>
+          </CardContent>
+        </Card>
+
+        <Card sx={{ backgroundColor: "var(--paper-surface)" }}>
+          <CardContent>
+            <Stack spacing={2}>
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                justifyContent="space-between"
+                alignItems={{ xs: "flex-start", sm: "center" }}
+              >
+                <Box>
+                  <Typography variant="h6">Request History</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Review and rerun previous report requests.
+                  </Typography>
+                </Box>
+                <Button
+                  variant="outlined"
+                  onClick={() => loadHistory({ offset: 0 })}
+                  disabled={!token || loadingHistory}
+                >
+                  {loadingHistory ? "Refreshing..." : "Refresh History"}
+                </Button>
+              </Stack>
+
+              {!historyItems.length ? (
+                <Typography variant="body2" color="text.secondary">
+                  No previous requests yet.
+                </Typography>
+              ) : (
+                <TableContainer component={Paper} variant="outlined">
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Created</TableCell>
+                        <TableCell>Prompt</TableCell>
+                        <TableCell>Status</TableCell>
+                        <TableCell>Confidence</TableCell>
+                        <TableCell align="right">Actions</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {historyItems.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell>{formatTimestamp(item.createdAt)}</TableCell>
+                          <TableCell sx={{ maxWidth: 420 }}>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis"
+                              }}
+                            >
+                              {item.prompt}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>{item.status || "-"}</TableCell>
+                          <TableCell>
+                            {Number.isFinite(Number(item.confidence))
+                              ? Number(item.confidence).toFixed(2)
+                              : "-"}
+                          </TableCell>
+                          <TableCell align="right">
+                            <Stack
+                              direction={{ xs: "column", sm: "row" }}
+                              spacing={1}
+                              justifyContent="flex-end"
+                            >
+                              <Button
+                                size="small"
+                                variant="text"
+                                onClick={() => handleUseHistoryPrompt(item)}
+                              >
+                                Use Prompt
+                              </Button>
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                onClick={() => handleReviewHistory(item)}
+                              >
+                                Review
+                              </Button>
+                              <Button
+                                size="small"
+                                variant="contained"
+                                onClick={() => handleRerunHistory(item)}
+                                disabled={
+                                  !item?.scopedPlan ||
+                                  loadingPlan ||
+                                  loadingExec ||
+                                  loadingHistory
+                                }
+                              >
+                                Rerun
+                              </Button>
+                            </Stack>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+
+              {historyPagination.hasMore ? (
+                <Box>
+                  <Button
+                    variant="text"
+                    onClick={() => loadHistory({ offset: historyItems.length })}
+                    disabled={loadingHistory}
+                  >
+                    {loadingHistory ? "Loading..." : "Load More"}
+                  </Button>
+                </Box>
               ) : null}
             </Stack>
           </CardContent>

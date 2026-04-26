@@ -36,6 +36,7 @@ Not: Seed içinde demo amaçlı düz metin parola kullanılıyor. Üretimde bcry
 - `GET /api/dictionary`
 - `POST /api/reports/plan`
 - `POST /api/reports/execute`
+- `GET /api/reports/history`
 - `POST /api/speech/transcribe`
 
 ## Güvenlik Prensipleri

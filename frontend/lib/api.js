@@ -43,6 +43,18 @@ export async function executeReport(token, plan, dryRun = false) {
   });
 }
 
+export async function getReportHistory(
+  token,
+  { limit = 20, offset = 0 } = {}
+) {
+  const params = new URLSearchParams({
+    limit: String(limit),
+    offset: String(offset)
+  });
+
+  return request(`/reports/history?${params.toString()}`, { token });
+}
+
 export async function transcribeAudio(token, audioBlob) {
   const formData = new FormData();
   const mimeType = audioBlob?.type || "audio/webm";

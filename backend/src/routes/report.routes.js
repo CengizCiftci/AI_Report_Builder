@@ -10,6 +10,64 @@ const { buildSql } = require("../services/sql-builder");
 
 const router = express.Router();
 
+router.get("/history", authenticate, async (req, res, next) => {
+  try {
+    const queryParams = z
+      .object({
+        limit: z.coerce.number().int().min(1).max(100).default(20),
+        offset: z.coerce.number().int().min(0).default(0)
+      })
+      .parse(req.query);
+
+    const [historyResult, countResult] = await Promise.all([
+      query(
+        `
+          SELECT
+            id,
+            prompt,
+            raw_plan AS "rawPlan",
+            scoped_plan AS "scopedPlan",
+            status,
+            confidence,
+            planner_source AS "plannerSource",
+            validation_errors AS "validationErrors",
+            audit_log AS "auditLog",
+            created_at AS "createdAt"
+          FROM report_plans
+          WHERE user_id = $1
+          ORDER BY created_at DESC
+          LIMIT $2
+          OFFSET $3
+        `,
+        [req.user.sub, queryParams.limit, queryParams.offset]
+      ),
+      query(
+        `
+          SELECT COUNT(*)::int AS total
+          FROM report_plans
+          WHERE user_id = $1
+        `,
+        [req.user.sub]
+      )
+    ]);
+
+    const total = countResult.rows[0]?.total || 0;
+    const items = historyResult.rows;
+
+    return res.json({
+      items,
+      pagination: {
+        limit: queryParams.limit,
+        offset: queryParams.offset,
+        total,
+        hasMore: queryParams.offset + items.length < total
+      }
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
 router.post("/plan", authenticate, async (req, res, next) => {
   try {
     const body = z
