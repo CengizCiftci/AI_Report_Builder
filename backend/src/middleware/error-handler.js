@@ -15,6 +15,13 @@ function errorHandler(err, req, res, _next) {
     });
   }
 
+  if (err?.name === "MulterError") {
+    return res.status(400).json({
+      error: "Invalid audio upload",
+      details: err.message
+    });
+  }
+
   console.error(err);
   return res.status(500).json({
     error: "Internal server error"

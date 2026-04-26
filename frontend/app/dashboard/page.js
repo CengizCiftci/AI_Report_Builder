@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Alert,
@@ -25,7 +25,9 @@ import {
   TableContainer,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import { createReportPlan, executeReport } from "@/lib/api";
+import MicIcon from "@mui/icons-material/Mic";
+import StopCircleIcon from "@mui/icons-material/StopCircle";
+import { createReportPlan, executeReport, transcribeAudio } from "@/lib/api";
 
 function composePlannerPrompt(
   promptHistory,
@@ -88,6 +90,10 @@ export default function DashboardPage() {
   const [debugOpen, setDebugOpen] = useState(false);
   const [clarificationQuestion, setClarificationQuestion] = useState("");
   const [promptHistory, setPromptHistory] = useState([]);
+  const [voiceState, setVoiceState] = useState("idle");
+  const mediaRecorderRef = useRef(null);
+  const mediaStreamRef = useRef(null);
+  const audioChunksRef = useRef([]);
 
   useEffect(() => {
     const savedToken = localStorage.getItem("sqlbuilder_token");
@@ -103,6 +109,22 @@ export default function DashboardPage() {
       setUser(JSON.parse(savedUser));
     }
   }, [router]);
+
+  useEffect(() => {
+    return () => {
+      if (
+        mediaRecorderRef.current &&
+        mediaRecorderRef.current.state !== "inactive"
+      ) {
+        mediaRecorderRef.current.stop();
+      }
+
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+        mediaStreamRef.current = null;
+      }
+    };
+  }, []);
 
   const scopedPlan = planResult?.scopedPlan;
 
@@ -168,6 +190,98 @@ export default function DashboardPage() {
       setError(err.message);
     } finally {
       setLoadingPlan(false);
+    }
+  }
+
+  function stopActiveStream() {
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      mediaStreamRef.current = null;
+    }
+  }
+
+  async function transcribeRecordedAudio(audioBlob) {
+    setVoiceState("transcribing");
+    setError("");
+
+    try {
+      const response = await transcribeAudio(token, audioBlob);
+      const transcript = response?.text?.trim();
+
+      if (!transcript) {
+        throw new Error("No speech detected. Please try again.");
+      }
+
+      setPrompt(transcript);
+      // setPrompt((prev) => {
+      //   const trimmed = prev.trim();
+      //   return trimmed ? `${trimmed}\n${transcript}` : transcript;
+      // });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setVoiceState("idle");
+    }
+  }
+
+  async function handleVoiceCommand() {
+    if (voiceState === "recording") {
+      if (
+        mediaRecorderRef.current &&
+        mediaRecorderRef.current.state !== "inactive"
+      ) {
+        mediaRecorderRef.current.stop();
+      }
+      return;
+    }
+
+    if (typeof window === "undefined") return;
+
+    if (
+      !navigator?.mediaDevices?.getUserMedia ||
+      typeof MediaRecorder === "undefined"
+    ) {
+      setError("Voice recording is not supported in this browser.");
+      return;
+    }
+
+    setError("");
+    audioChunksRef.current = [];
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
+
+      const recorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onerror = () => {
+        stopActiveStream();
+        setVoiceState("idle");
+        setError("Voice recording failed. Please try again.");
+      };
+
+      recorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, {
+          type: recorder.mimeType || "audio/webm"
+        });
+        audioChunksRef.current = [];
+        stopActiveStream();
+        await transcribeRecordedAudio(audioBlob);
+      };
+
+      recorder.start();
+      setVoiceState("recording");
+    } catch (_err) {
+      stopActiveStream();
+      setVoiceState("idle");
+      setError("Microphone access was denied or unavailable.");
     }
   }
 
@@ -269,7 +383,11 @@ export default function DashboardPage() {
                     : "Example: Absenteeism rate and student count by school in the last 30 days"
                 }
               />
-              <Stack direction="row" spacing={1}>
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                spacing={1}
+                sx={{ flexWrap: "wrap" }}
+              >
                 <Button
                   variant="contained"
                   onClick={handleGeneratePlan}
@@ -279,7 +397,27 @@ export default function DashboardPage() {
                     ? "Generating Plan..."
                     : clarificationQuestion
                       ? "Add Response and Generate Report Plan"
-                      : "Generate Report Plan"}
+                    : "Generate Report Plan"}
+                </Button>
+                <Button
+                  variant={voiceState === "recording" ? "contained" : "outlined"}
+                  color={voiceState === "recording" ? "error" : "primary"}
+                  startIcon={
+                    voiceState === "recording" ? <StopCircleIcon /> : <MicIcon />
+                  }
+                  onClick={handleVoiceCommand}
+                  disabled={
+                    !token ||
+                    loadingPlan ||
+                    loadingExec ||
+                    voiceState === "transcribing"
+                  }
+                >
+                  {voiceState === "recording"
+                    ? "Stop Recording"
+                    : voiceState === "transcribing"
+                      ? "Transcribing..."
+                      : "Voice Command"}
                 </Button>
                 {clarificationQuestion || promptHistory.length ? (
                   <Button
@@ -291,6 +429,11 @@ export default function DashboardPage() {
                   </Button>
                 ) : null}
               </Stack>
+              {voiceState === "recording" ? (
+                <Typography variant="body2" color="error">
+                  Listening... click Stop Recording when you finish speaking.
+                </Typography>
+              ) : null}
             </Stack>
           </CardContent>
         </Card>

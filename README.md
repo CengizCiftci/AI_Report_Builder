@@ -36,6 +36,7 @@ Not: Seed içinde demo amaçlı düz metin parola kullanılıyor. Üretimde bcry
 - `GET /api/dictionary`
 - `POST /api/reports/plan`
 - `POST /api/reports/execute`
+- `POST /api/speech/transcribe`
 
 ## Güvenlik Prensipleri
 - LLM sadece plan üretir; SQL üretimi backend'de whitelist metadata ile yapılır.

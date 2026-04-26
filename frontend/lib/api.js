@@ -42,3 +42,26 @@ export async function executeReport(token, plan, dryRun = false) {
     body: { plan, dryRun }
   });
 }
+
+export async function transcribeAudio(token, audioBlob) {
+  const formData = new FormData();
+  const mimeType = audioBlob?.type || "audio/webm";
+  const extension = mimeType.split("/")[1] || "webm";
+  formData.append("audio", audioBlob, `voice-input.${extension}`);
+
+  const response = await fetch(`${API_BASE}/speech/transcribe`, {
+    method: "POST",
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    },
+    body: formData
+  });
+
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(payload?.error || "Transcription request failed");
+  }
+
+  return payload;
+}

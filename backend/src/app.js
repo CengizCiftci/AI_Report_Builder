@@ -6,6 +6,7 @@ const { env } = require("./config/env");
 const { authRouter } = require("./routes/auth.routes");
 const { dictionaryRouter } = require("./routes/dictionary.routes");
 const { reportRouter } = require("./routes/report.routes");
+const { speechRouter } = require("./routes/speech.routes");
 const { errorHandler } = require("./middleware/error-handler");
 
 const app = express();
@@ -27,6 +28,7 @@ app.get("/health", (_req, res) => {
 app.use("/api/auth", authRouter);
 app.use("/api/dictionary", dictionaryRouter);
 app.use("/api/reports", reportRouter);
+app.use("/api/speech", speechRouter);
 
 app.use(errorHandler);
 
