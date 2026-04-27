@@ -93,6 +93,7 @@ export default function DashboardPage() {
   const [loadingPlan, setLoadingPlan] = useState(false);
   const [loadingExec, setLoadingExec] = useState(false);
   const [debugOpen, setDebugOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [clarificationQuestion, setClarificationQuestion] = useState("");
   const [promptHistory, setPromptHistory] = useState([]);
   const [historyItems, setHistoryItems] = useState([]);
@@ -245,11 +246,19 @@ export default function DashboardPage() {
     }
   }
 
+  function handleOpenHistory() {
+    setHistoryOpen(true);
+    if (!historyItems.length && token) {
+      loadHistory({ offset: 0 });
+    }
+  }
+
   function handleUseHistoryPrompt(item) {
     setPrompt(item?.prompt || "");
     setPromptHistory([]);
     setClarificationQuestion("");
     setError("");
+    setHistoryOpen(false);
   }
 
   function handleReviewHistory(item) {
@@ -266,6 +275,7 @@ export default function DashboardPage() {
 
   async function handleRerunHistory(item) {
     if (!item?.scopedPlan) return;
+    setHistoryOpen(false);
     await handleRunReport(item.scopedPlan);
   }
 
@@ -405,6 +415,13 @@ export default function DashboardPage() {
                   />
                 ))}
                 <Button
+                  variant="outlined"
+                  onClick={handleOpenHistory}
+                  disabled={!token}
+                >
+                  History
+                </Button>
+                <Button
                   onClick={handleLogout}
                   color="secondary"
                   variant="contained"
@@ -514,124 +531,6 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card sx={{ backgroundColor: "var(--paper-surface)" }}>
-          <CardContent>
-            <Stack spacing={2}>
-              <Stack
-                direction={{ xs: "column", sm: "row" }}
-                justifyContent="space-between"
-                alignItems={{ xs: "flex-start", sm: "center" }}
-              >
-                <Box>
-                  <Typography variant="h6">Request History</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Review and rerun previous report requests.
-                  </Typography>
-                </Box>
-                <Button
-                  variant="outlined"
-                  onClick={() => loadHistory({ offset: 0 })}
-                  disabled={!token || loadingHistory}
-                >
-                  {loadingHistory ? "Refreshing..." : "Refresh History"}
-                </Button>
-              </Stack>
-
-              {!historyItems.length ? (
-                <Typography variant="body2" color="text.secondary">
-                  No previous requests yet.
-                </Typography>
-              ) : (
-                <TableContainer component={Paper} variant="outlined">
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Created</TableCell>
-                        <TableCell>Prompt</TableCell>
-                        <TableCell>Status</TableCell>
-                        <TableCell>Confidence</TableCell>
-                        <TableCell align="right">Actions</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {historyItems.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell>{formatTimestamp(item.createdAt)}</TableCell>
-                          <TableCell sx={{ maxWidth: 420 }}>
-                            <Typography
-                              variant="body2"
-                              sx={{
-                                whiteSpace: "nowrap",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis"
-                              }}
-                            >
-                              {item.prompt}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>{item.status || "-"}</TableCell>
-                          <TableCell>
-                            {Number.isFinite(Number(item.confidence))
-                              ? Number(item.confidence).toFixed(2)
-                              : "-"}
-                          </TableCell>
-                          <TableCell align="right">
-                            <Stack
-                              direction={{ xs: "column", sm: "row" }}
-                              spacing={1}
-                              justifyContent="flex-end"
-                            >
-                              <Button
-                                size="small"
-                                variant="text"
-                                onClick={() => handleUseHistoryPrompt(item)}
-                              >
-                                Use Prompt
-                              </Button>
-                              <Button
-                                size="small"
-                                variant="outlined"
-                                onClick={() => handleReviewHistory(item)}
-                              >
-                                Review
-                              </Button>
-                              <Button
-                                size="small"
-                                variant="contained"
-                                onClick={() => handleRerunHistory(item)}
-                                disabled={
-                                  !item?.scopedPlan ||
-                                  loadingPlan ||
-                                  loadingExec ||
-                                  loadingHistory
-                                }
-                              >
-                                Rerun
-                              </Button>
-                            </Stack>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              )}
-
-              {historyPagination.hasMore ? (
-                <Box>
-                  <Button
-                    variant="text"
-                    onClick={() => loadHistory({ offset: historyItems.length })}
-                    disabled={loadingHistory}
-                  >
-                    {loadingHistory ? "Loading..." : "Load More"}
-                  </Button>
-                </Box>
-              ) : null}
-            </Stack>
-          </CardContent>
-        </Card>
-
         {error ? <Alert severity="error">{error}</Alert> : null}
 
         {execResult ? (
@@ -708,6 +607,138 @@ export default function DashboardPage() {
           </Card>
         ) : null}
       </Stack>
+
+      <Drawer
+        anchor="left"
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+      >
+        <Box sx={{ width: { xs: "100vw", sm: 760 }, p: 2 }}>
+          <Stack spacing={2}>
+            <Stack
+              direction="row"
+              alignItems="center"
+              justifyContent="space-between"
+            >
+              <Box>
+                <Typography variant="h6">Request History</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Review and rerun previous report requests.
+                </Typography>
+              </Box>
+              <IconButton
+                onClick={() => setHistoryOpen(false)}
+                aria-label="Close Request History"
+              >
+                <CloseIcon />
+              </IconButton>
+            </Stack>
+            <Divider />
+
+            <Stack direction="row" justifyContent="flex-end">
+              <Button
+                variant="outlined"
+                onClick={() => loadHistory({ offset: 0 })}
+                disabled={!token || loadingHistory}
+              >
+                {loadingHistory ? "Refreshing..." : "Refresh History"}
+              </Button>
+            </Stack>
+
+            {!historyItems.length ? (
+              <Typography variant="body2" color="text.secondary">
+                No previous requests yet.
+              </Typography>
+            ) : (
+              <TableContainer component={Paper} variant="outlined">
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Created</TableCell>
+                      <TableCell>Prompt</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>Confidence</TableCell>
+                      <TableCell align="right">Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {historyItems.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell>{formatTimestamp(item.createdAt)}</TableCell>
+                        <TableCell sx={{ maxWidth: 420 }}>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis"
+                            }}
+                          >
+                            {item.prompt}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>{item.status || "-"}</TableCell>
+                        <TableCell>
+                          {Number.isFinite(Number(item.confidence))
+                            ? Number(item.confidence).toFixed(2)
+                            : "-"}
+                        </TableCell>
+                        <TableCell align="right">
+                          <Stack
+                            direction={{ xs: "column", sm: "row" }}
+                            spacing={1}
+                            justifyContent="flex-end"
+                          >
+                            <Button
+                              size="small"
+                              variant="text"
+                              onClick={() => handleUseHistoryPrompt(item)}
+                            >
+                              Use Prompt
+                            </Button>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              onClick={() => handleReviewHistory(item)}
+                            >
+                              Review
+                            </Button>
+                            <Button
+                              size="small"
+                              variant="contained"
+                              onClick={() => handleRerunHistory(item)}
+                              disabled={
+                                !item?.scopedPlan ||
+                                loadingPlan ||
+                                loadingExec ||
+                                loadingHistory
+                              }
+                            >
+                              Rerun
+                            </Button>
+                          </Stack>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+
+            {historyPagination.hasMore ? (
+              <Box>
+                <Button
+                  variant="text"
+                  onClick={() => loadHistory({ offset: historyItems.length })}
+                  disabled={loadingHistory}
+                >
+                  {loadingHistory ? "Loading..." : "Load More"}
+                </Button>
+              </Box>
+            ) : null}
+          </Stack>
+        </Box>
+      </Drawer>
 
       <Drawer
         anchor="right"
