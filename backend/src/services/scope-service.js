@@ -17,10 +17,17 @@ function upsertInFilter(filters, field, values) {
   const idx = nextFilters.findIndex((f) => f.field === field);
 
   if (idx >= 0) {
+    const existingValue = nextFilters[idx]?.value;
+    const existingValues = Array.isArray(existingValue)
+      ? existingValue
+      : existingValue === null || existingValue === undefined
+        ? []
+        : [existingValue];
+
     nextFilters[idx] = {
       field,
       operator: "IN",
-      value: [...new Set([...(nextFilters[idx].value || []), ...values])]
+      value: [...new Set([...existingValues, ...values])]
     };
   } else {
     nextFilters.push({ field, operator: "IN", value: values });
