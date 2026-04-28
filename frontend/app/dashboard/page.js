@@ -146,6 +146,9 @@ export default function DashboardPage() {
   }, [token]);
 
   const scopedPlan = planResult?.scopedPlan;
+  const isAdmin = (user?.roles || []).some(
+    (role) => role === "SUPER_ADMIN" || role === "SCHOOL_ADMIN",
+  );
 
   const tableColumns = useMemo(() => {
     if (!execResult?.rows?.length) return [];
@@ -414,6 +417,14 @@ export default function DashboardPage() {
                     variant="outlined"
                   />
                 ))}
+                {isAdmin ? (
+                  <Button
+                    variant="outlined"
+                    onClick={() => router.push("/admin")}
+                  >
+                    Admin
+                  </Button>
+                ) : null}
                 <Button
                   variant="outlined"
                   onClick={handleOpenHistory}
@@ -609,11 +620,11 @@ export default function DashboardPage() {
       </Stack>
 
       <Drawer
-        anchor="left"
+        anchor="right"
         open={historyOpen}
         onClose={() => setHistoryOpen(false)}
       >
-        <Box sx={{ width: { xs: "100vw", sm: 760 }, p: 2 }}>
+        <Box sx={{ width: { xs: "100vw", sm: 1200 }, p: 2 }}>
           <Stack spacing={2}>
             <Stack
               direction="row"

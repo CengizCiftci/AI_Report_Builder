@@ -55,6 +55,68 @@ export async function getReportHistory(
   return request(`/reports/history?${params.toString()}`, { token });
 }
 
+export async function getAdminDictionary(token) {
+  return request("/admin/dictionary", { token });
+}
+
+export async function createAdminEntity(token, payload) {
+  return request("/admin/dictionary/entities", {
+    method: "POST",
+    token,
+    body: payload
+  });
+}
+
+export async function createAdminSynonym(token, payload) {
+  return request("/admin/dictionary/synonyms", {
+    method: "POST",
+    token,
+    body: payload
+  });
+}
+
+export async function createAdminMetric(token, payload) {
+  return request("/admin/dictionary/metrics", {
+    method: "POST",
+    token,
+    body: payload
+  });
+}
+
+export async function createAdminRelationship(token, payload) {
+  return request("/admin/dictionary/relationships", {
+    method: "POST",
+    token,
+    body: payload
+  });
+}
+
+export async function createAdminField(token, payload) {
+  return request("/admin/dictionary/fields", {
+    method: "POST",
+    token,
+    body: payload
+  });
+}
+
+export async function getAdminAnalyticsSummary(token) {
+  return request("/admin/analytics/summary", { token });
+}
+
+export async function getAdminQueryLogs(
+  token,
+  { limit = 25, offset = 0, status } = {}
+) {
+  const params = new URLSearchParams({
+    limit: String(limit),
+    offset: String(offset)
+  });
+  if (status) {
+    params.set("status", status);
+  }
+  return request(`/admin/query-logs?${params.toString()}`, { token });
+}
+
 export async function transcribeAudio(token, audioBlob) {
   const formData = new FormData();
   const mimeType = audioBlob?.type || "audio/webm";

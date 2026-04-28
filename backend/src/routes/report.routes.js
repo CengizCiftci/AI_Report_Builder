@@ -10,6 +10,38 @@ const { buildSql } = require("../services/sql-builder");
 
 const router = express.Router();
 
+async function saveQueryLog(logInput) {
+  try {
+    await query(
+      `
+        INSERT INTO report_query_logs (
+          user_id,
+          status,
+          is_dry_run,
+          row_count,
+          execution_ms,
+          error_message,
+          sql_text,
+          params_json
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
+      `,
+      [
+        logInput.userId ?? null,
+        logInput.status ?? "error",
+        Boolean(logInput.isDryRun),
+        logInput.rowCount ?? null,
+        logInput.executionMs ?? null,
+        logInput.errorMessage ?? null,
+        logInput.sqlText ?? null,
+        JSON.stringify(logInput.paramsJson ?? [])
+      ]
+    );
+  } catch (error) {
+    console.warn("report_query_logs save skipped:", error.message);
+  }
+}
+
 router.get("/history", authenticate, async (req, res, next) => {
   try {
     const queryParams = z
@@ -150,23 +182,60 @@ router.post("/plan", authenticate, async (req, res, next) => {
 });
 
 router.post("/execute", authenticate, async (req, res, next) => {
+  const startedAt = Date.now();
+  let sqlText = null;
+  let paramsJson = [];
+  let rowCount = null;
+  let isDryRun = false;
+  let status = "error";
+  let errorMessage = null;
+
   try {
-    const body =   z
+    const body = z
       .object({
         plan: z.any(),
         dryRun: z.boolean().default(false)
       })
       .parse(req.body);
 
+    isDryRun = body.dryRun;
+
     const validatedPlan = ReportPlanSchema.parse(body.plan);
     const scopedPlan = applyScopeToPlan(validatedPlan, req.user);
     const { sql, params } = buildSql(scopedPlan);
+    sqlText = sql;
+    paramsJson = params;
 
     if (body.dryRun) {
+      status = "dry_run";
+      rowCount = 0;
+      await saveQueryLog({
+        userId: req.user.sub,
+        status,
+        isDryRun,
+        rowCount,
+        executionMs: Date.now() - startedAt,
+        errorMessage,
+        sqlText,
+        paramsJson
+      });
       return res.json({ sql, params, rows: [] });
     }
 
     const result = await query(sql, params);
+    status = "success";
+    rowCount = result.rowCount ?? 0;
+    await saveQueryLog({
+      userId: req.user.sub,
+      status,
+      isDryRun,
+      rowCount,
+      executionMs: Date.now() - startedAt,
+      errorMessage,
+      sqlText,
+      paramsJson
+    });
+
     return res.json({
       sql,
       params,
@@ -174,6 +243,17 @@ router.post("/execute", authenticate, async (req, res, next) => {
       rows: result.rows
     });
   } catch (error) {
+    errorMessage = error.message;
+    await saveQueryLog({
+      userId: req.user?.sub,
+      status,
+      isDryRun,
+      rowCount,
+      executionMs: Date.now() - startedAt,
+      errorMessage,
+      sqlText,
+      paramsJson
+    });
     return next(error);
   }
 });

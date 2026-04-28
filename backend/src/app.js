@@ -4,6 +4,7 @@ const helmet = require("helmet");
 const morgan = require("morgan");
 const { env } = require("./config/env");
 const { authRouter } = require("./routes/auth.routes");
+const { adminRouter } = require("./routes/admin.routes");
 const { dictionaryRouter } = require("./routes/dictionary.routes");
 const { reportRouter } = require("./routes/report.routes");
 const { speechRouter } = require("./routes/speech.routes");
@@ -26,6 +27,7 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/api/auth", authRouter);
+app.use("/api/admin", adminRouter);
 app.use("/api/dictionary", dictionaryRouter);
 app.use("/api/reports", reportRouter);
 app.use("/api/speech", speechRouter);
