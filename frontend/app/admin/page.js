@@ -14,12 +14,14 @@ import {
   MenuItem,
   Paper,
   Stack,
+  Tab,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
+  Tabs,
   TextField,
   Typography
 } from "@mui/material";
@@ -102,6 +104,7 @@ export default function AdminPage() {
     joinPath: "",
     cardinality: "N:1"
   });
+  const [dictionaryTab, setDictionaryTab] = useState("entities");
 
   const adminRoles = useMemo(
     () => ["SUPER_ADMIN", "SCHOOL_ADMIN"],
@@ -450,86 +453,527 @@ export default function AdminPage() {
               <Typography variant="body2" color="text.secondary">
                 Counts: {dictionary.entities.length} entities, {dictionary.synonyms.length} synonyms, {dictionary.metrics.length} metrics, {dictionary.relationships.length} relationships, {dictionary.fields.length} fields.
               </Typography>
-              {loadingDictionary ? <Typography variant="body2">Loading dictionary...</Typography> : null}
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                justifyContent="space-between"
+                alignItems={{ xs: "flex-start", sm: "center" }}
+              >
+                <Tabs
+                  value={dictionaryTab}
+                  onChange={(_event, nextValue) => setDictionaryTab(nextValue)}
+                  variant="scrollable"
+                  allowScrollButtonsMobile
+                >
+                  <Tab
+                    value="entities"
+                    label={`Entities (${dictionary.entities.length})`}
+                  />
+                  <Tab
+                    value="synonyms"
+                    label={`Synonyms (${dictionary.synonyms.length})`}
+                  />
+                  <Tab
+                    value="metrics"
+                    label={`Metrics (${dictionary.metrics.length})`}
+                  />
+                  <Tab
+                    value="relationships"
+                    label={`Relationships (${dictionary.relationships.length})`}
+                  />
+                  <Tab
+                    value="fields"
+                    label={`Fields (${dictionary.fields.length})`}
+                  />
+                </Tabs>
+                <Button
+                  variant="outlined"
+                  onClick={loadDictionary}
+                  disabled={loadingDictionary}
+                >
+                  {loadingDictionary ? "Loading..." : "Refresh Dictionary"}
+                </Button>
+              </Stack>
 
-              <Grid container spacing={2}>
-                <Grid item xs={12} md={6}>
+              {dictionaryTab === "entities" ? (
+                <Stack spacing={2}>
                   <Paper variant="outlined" sx={{ p: 2 }}>
-                    <Typography variant="subtitle1" sx={{ mb: 1 }}>Add Entity</Typography>
+                    <Typography variant="subtitle1" sx={{ mb: 1 }}>
+                      Existing Entities
+                    </Typography>
+                    <TableContainer>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>Key</TableCell>
+                            <TableCell>Label</TableCell>
+                            <TableCell>Description</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {!dictionary.entities.length ? (
+                            <TableRow>
+                              <TableCell colSpan={3}>No entities yet.</TableCell>
+                            </TableRow>
+                          ) : (
+                            dictionary.entities.map((entity) => (
+                              <TableRow key={entity.id || entity.key}>
+                                <TableCell>{entity.key}</TableCell>
+                                <TableCell>{entity.label}</TableCell>
+                                <TableCell>{entity.description || "-"}</TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Paper>
+
+                  <Paper variant="outlined" sx={{ p: 2 }}>
+                    <Typography variant="subtitle1" sx={{ mb: 1 }}>
+                      Add Entity
+                    </Typography>
                     <Box component="form" onSubmit={handleCreateEntity}>
                       <Stack spacing={1}>
-                        <TextField label="Key" value={entityForm.key} onChange={(e) => setEntityForm((prev) => ({ ...prev, key: e.target.value }))} required />
-                        <TextField label="Label" value={entityForm.label} onChange={(e) => setEntityForm((prev) => ({ ...prev, label: e.target.value }))} required />
-                        <TextField label="Description" value={entityForm.description} onChange={(e) => setEntityForm((prev) => ({ ...prev, description: e.target.value }))} />
-                        <Button type="submit" variant="contained">Create Entity</Button>
+                        <TextField
+                          label="Key"
+                          value={entityForm.key}
+                          onChange={(e) =>
+                            setEntityForm((prev) => ({ ...prev, key: e.target.value }))
+                          }
+                          required
+                        />
+                        <TextField
+                          label="Label"
+                          value={entityForm.label}
+                          onChange={(e) =>
+                            setEntityForm((prev) => ({ ...prev, label: e.target.value }))
+                          }
+                          required
+                        />
+                        <TextField
+                          label="Description"
+                          value={entityForm.description}
+                          onChange={(e) =>
+                            setEntityForm((prev) => ({
+                              ...prev,
+                              description: e.target.value
+                            }))
+                          }
+                        />
+                        <Button type="submit" variant="contained">
+                          Create Entity
+                        </Button>
                       </Stack>
                     </Box>
                   </Paper>
-                </Grid>
+                </Stack>
+              ) : null}
 
-                <Grid item xs={12} md={6}>
+              {dictionaryTab === "synonyms" ? (
+                <Stack spacing={2}>
                   <Paper variant="outlined" sx={{ p: 2 }}>
-                    <Typography variant="subtitle1" sx={{ mb: 1 }}>Add Synonym</Typography>
+                    <Typography variant="subtitle1" sx={{ mb: 1 }}>
+                      Existing Synonyms
+                    </Typography>
+                    <TableContainer>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>Entity</TableCell>
+                            <TableCell>Synonym</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {!dictionary.synonyms.length ? (
+                            <TableRow>
+                              <TableCell colSpan={2}>No synonyms yet.</TableCell>
+                            </TableRow>
+                          ) : (
+                            dictionary.synonyms.map((synonym) => (
+                              <TableRow
+                                key={`${synonym.id || synonym.entity_key}-${synonym.synonym_text}`}
+                              >
+                                <TableCell>{synonym.entity_key}</TableCell>
+                                <TableCell>{synonym.synonym_text}</TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Paper>
+
+                  <Paper variant="outlined" sx={{ p: 2 }}>
+                    <Typography variant="subtitle1" sx={{ mb: 1 }}>
+                      Add Synonym
+                    </Typography>
                     <Box component="form" onSubmit={handleCreateSynonym}>
                       <Stack spacing={1}>
                         <TextField
                           select
                           label="Entity"
                           value={synonymForm.entityKey}
-                          onChange={(e) => setSynonymForm((prev) => ({ ...prev, entityKey: e.target.value }))}
+                          onChange={(e) =>
+                            setSynonymForm((prev) => ({
+                              ...prev,
+                              entityKey: e.target.value
+                            }))
+                          }
                           required
                         >
                           {dictionary.entities.map((entity) => (
-                            <MenuItem key={entity.id} value={entity.key}>{entity.key}</MenuItem>
+                            <MenuItem key={entity.id} value={entity.key}>
+                              {entity.key}
+                            </MenuItem>
                           ))}
                         </TextField>
-                        <TextField label="Synonym" value={synonymForm.synonymText} onChange={(e) => setSynonymForm((prev) => ({ ...prev, synonymText: e.target.value }))} required />
-                        <Button type="submit" variant="contained">Create Synonym</Button>
+                        <TextField
+                          label="Synonym"
+                          value={synonymForm.synonymText}
+                          onChange={(e) =>
+                            setSynonymForm((prev) => ({
+                              ...prev,
+                              synonymText: e.target.value
+                            }))
+                          }
+                          required
+                        />
+                        <Button type="submit" variant="contained">
+                          Create Synonym
+                        </Button>
                       </Stack>
                     </Box>
                   </Paper>
-                </Grid>
+                </Stack>
+              ) : null}
 
-                <Grid item xs={12} md={6}>
+              {dictionaryTab === "metrics" ? (
+                <Stack spacing={2}>
                   <Paper variant="outlined" sx={{ p: 2 }}>
-                    <Typography variant="subtitle1" sx={{ mb: 1 }}>Add Metric</Typography>
+                    <Typography variant="subtitle1" sx={{ mb: 1 }}>
+                      Existing Metrics
+                    </Typography>
+                    <TableContainer>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>Key</TableCell>
+                            <TableCell>Label</TableCell>
+                            <TableCell>Formula Type</TableCell>
+                            <TableCell>Aggregation Default</TableCell>
+                            <TableCell>Numerator</TableCell>
+                            <TableCell>Denominator</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {!dictionary.metrics.length ? (
+                            <TableRow>
+                              <TableCell colSpan={6}>No metrics yet.</TableCell>
+                            </TableRow>
+                          ) : (
+                            dictionary.metrics.map((metric) => (
+                              <TableRow key={metric.key}>
+                                <TableCell>{metric.key}</TableCell>
+                                <TableCell>{metric.label}</TableCell>
+                                <TableCell>{metric.formula_type}</TableCell>
+                                <TableCell>{metric.aggregation_default}</TableCell>
+                                <TableCell>{metric.numerator_field || "-"}</TableCell>
+                                <TableCell>{metric.denominator_field || "-"}</TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Paper>
+
+                  <Paper variant="outlined" sx={{ p: 2 }}>
+                    <Typography variant="subtitle1" sx={{ mb: 1 }}>
+                      Add Metric
+                    </Typography>
                     <Box component="form" onSubmit={handleCreateMetric}>
                       <Stack spacing={1}>
-                        <TextField label="Key" value={metricForm.key} onChange={(e) => setMetricForm((prev) => ({ ...prev, key: e.target.value }))} required />
-                        <TextField label="Label" value={metricForm.label} onChange={(e) => setMetricForm((prev) => ({ ...prev, label: e.target.value }))} required />
-                        <TextField label="Formula Type" value={metricForm.formulaType} onChange={(e) => setMetricForm((prev) => ({ ...prev, formulaType: e.target.value }))} required />
-                        <TextField label="Aggregation Default" value={metricForm.aggregationDefault} onChange={(e) => setMetricForm((prev) => ({ ...prev, aggregationDefault: e.target.value }))} required />
-                        <TextField label="Numerator Field" value={metricForm.numeratorField} onChange={(e) => setMetricForm((prev) => ({ ...prev, numeratorField: e.target.value }))} />
-                        <TextField label="Denominator Field" value={metricForm.denominatorField} onChange={(e) => setMetricForm((prev) => ({ ...prev, denominatorField: e.target.value }))} />
-                        <Button type="submit" variant="contained">Create Metric</Button>
+                        <TextField
+                          label="Key"
+                          value={metricForm.key}
+                          onChange={(e) =>
+                            setMetricForm((prev) => ({ ...prev, key: e.target.value }))
+                          }
+                          required
+                        />
+                        <TextField
+                          label="Label"
+                          value={metricForm.label}
+                          onChange={(e) =>
+                            setMetricForm((prev) => ({ ...prev, label: e.target.value }))
+                          }
+                          required
+                        />
+                        <TextField
+                          label="Formula Type"
+                          value={metricForm.formulaType}
+                          onChange={(e) =>
+                            setMetricForm((prev) => ({
+                              ...prev,
+                              formulaType: e.target.value
+                            }))
+                          }
+                          required
+                        />
+                        <TextField
+                          label="Aggregation Default"
+                          value={metricForm.aggregationDefault}
+                          onChange={(e) =>
+                            setMetricForm((prev) => ({
+                              ...prev,
+                              aggregationDefault: e.target.value
+                            }))
+                          }
+                          required
+                        />
+                        <TextField
+                          label="Numerator Field"
+                          value={metricForm.numeratorField}
+                          onChange={(e) =>
+                            setMetricForm((prev) => ({
+                              ...prev,
+                              numeratorField: e.target.value
+                            }))
+                          }
+                        />
+                        <TextField
+                          label="Denominator Field"
+                          value={metricForm.denominatorField}
+                          onChange={(e) =>
+                            setMetricForm((prev) => ({
+                              ...prev,
+                              denominatorField: e.target.value
+                            }))
+                          }
+                        />
+                        <Button type="submit" variant="contained">
+                          Create Metric
+                        </Button>
                       </Stack>
                     </Box>
                   </Paper>
-                </Grid>
+                </Stack>
+              ) : null}
 
-                <Grid item xs={12} md={6}>
+              {dictionaryTab === "relationships" ? (
+                <Stack spacing={2}>
                   <Paper variant="outlined" sx={{ p: 2 }}>
-                    <Typography variant="subtitle1" sx={{ mb: 1 }}>Add Field</Typography>
+                    <Typography variant="subtitle1" sx={{ mb: 1 }}>
+                      Existing Relationships
+                    </Typography>
+                    <TableContainer>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>From</TableCell>
+                            <TableCell>To</TableCell>
+                            <TableCell>Join Path</TableCell>
+                            <TableCell>Cardinality</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {!dictionary.relationships.length ? (
+                            <TableRow>
+                              <TableCell colSpan={4}>
+                                No relationships yet.
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            dictionary.relationships.map((relationship) => (
+                              <TableRow
+                                key={`${relationship.from_entity}-${relationship.to_entity}-${relationship.join_path}`}
+                              >
+                                <TableCell>{relationship.from_entity}</TableCell>
+                                <TableCell>{relationship.to_entity}</TableCell>
+                                <TableCell>{relationship.join_path}</TableCell>
+                                <TableCell>{relationship.cardinality}</TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Paper>
+
+                  <Paper variant="outlined" sx={{ p: 2 }}>
+                    <Typography variant="subtitle1" sx={{ mb: 1 }}>
+                      Add Relationship
+                    </Typography>
+                    <Box component="form" onSubmit={handleCreateRelationship}>
+                      <Grid container spacing={1}>
+                        <Grid item xs={12} md={3}>
+                          <TextField
+                            fullWidth
+                            label="From Entity"
+                            value={relationshipForm.fromEntity}
+                            onChange={(e) =>
+                              setRelationshipForm((prev) => ({
+                                ...prev,
+                                fromEntity: e.target.value
+                              }))
+                            }
+                            required
+                          />
+                        </Grid>
+                        <Grid item xs={12} md={3}>
+                          <TextField
+                            fullWidth
+                            label="To Entity"
+                            value={relationshipForm.toEntity}
+                            onChange={(e) =>
+                              setRelationshipForm((prev) => ({
+                                ...prev,
+                                toEntity: e.target.value
+                              }))
+                            }
+                            required
+                          />
+                        </Grid>
+                        <Grid item xs={12} md={4}>
+                          <TextField
+                            fullWidth
+                            label="Join Path"
+                            value={relationshipForm.joinPath}
+                            onChange={(e) =>
+                              setRelationshipForm((prev) => ({
+                                ...prev,
+                                joinPath: e.target.value
+                              }))
+                            }
+                            required
+                          />
+                        </Grid>
+                        <Grid item xs={12} md={1}>
+                          <TextField
+                            fullWidth
+                            label="Cardinality"
+                            value={relationshipForm.cardinality}
+                            onChange={(e) =>
+                              setRelationshipForm((prev) => ({
+                                ...prev,
+                                cardinality: e.target.value
+                              }))
+                            }
+                            required
+                          />
+                        </Grid>
+                        <Grid item xs={12} md={1}>
+                          <Button
+                            type="submit"
+                            variant="contained"
+                            fullWidth
+                            sx={{ height: "100%" }}
+                          >
+                            Create
+                          </Button>
+                        </Grid>
+                      </Grid>
+                    </Box>
+                  </Paper>
+                </Stack>
+              ) : null}
+
+              {dictionaryTab === "fields" ? (
+                <Stack spacing={2}>
+                  <Paper variant="outlined" sx={{ p: 2 }}>
+                    <Typography variant="subtitle1" sx={{ mb: 1 }}>
+                      Existing Fields
+                    </Typography>
+                    <TableContainer>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>Field Key</TableCell>
+                            <TableCell>Entity</TableCell>
+                            <TableCell>Data Type</TableCell>
+                            <TableCell>Groupable</TableCell>
+                            <TableCell>Filterable</TableCell>
+                            <TableCell>Aggregatable</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {!dictionary.fields.length ? (
+                            <TableRow>
+                              <TableCell colSpan={6}>No fields yet.</TableCell>
+                            </TableRow>
+                          ) : (
+                            dictionary.fields.map((field) => (
+                              <TableRow key={field.field_key}>
+                                <TableCell>{field.field_key}</TableCell>
+                                <TableCell>{field.entity_key}</TableCell>
+                                <TableCell>{field.data_type}</TableCell>
+                                <TableCell>{field.is_groupable ? "true" : "false"}</TableCell>
+                                <TableCell>{field.is_filterable ? "true" : "false"}</TableCell>
+                                <TableCell>{field.is_aggregatable ? "true" : "false"}</TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Paper>
+
+                  <Paper variant="outlined" sx={{ p: 2 }}>
+                    <Typography variant="subtitle1" sx={{ mb: 1 }}>
+                      Add Field
+                    </Typography>
                     <Box component="form" onSubmit={handleCreateField}>
                       <Stack spacing={1}>
-                        <TextField label="Field Key" value={fieldForm.fieldKey} onChange={(e) => setFieldForm((prev) => ({ ...prev, fieldKey: e.target.value }))} required />
+                        <TextField
+                          label="Field Key"
+                          value={fieldForm.fieldKey}
+                          onChange={(e) =>
+                            setFieldForm((prev) => ({
+                              ...prev,
+                              fieldKey: e.target.value
+                            }))
+                          }
+                          required
+                        />
                         <TextField
                           select
                           label="Entity Key"
                           value={fieldForm.entityKey}
-                          onChange={(e) => setFieldForm((prev) => ({ ...prev, entityKey: e.target.value }))}
+                          onChange={(e) =>
+                            setFieldForm((prev) => ({
+                              ...prev,
+                              entityKey: e.target.value
+                            }))
+                          }
                           required
                         >
                           {dictionary.entities.map((entity) => (
-                            <MenuItem key={entity.id} value={entity.key}>{entity.key}</MenuItem>
+                            <MenuItem key={entity.id} value={entity.key}>
+                              {entity.key}
+                            </MenuItem>
                           ))}
                         </TextField>
-                        <TextField label="Data Type" value={fieldForm.dataType} onChange={(e) => setFieldForm((prev) => ({ ...prev, dataType: e.target.value }))} required />
+                        <TextField
+                          label="Data Type"
+                          value={fieldForm.dataType}
+                          onChange={(e) =>
+                            setFieldForm((prev) => ({
+                              ...prev,
+                              dataType: e.target.value
+                            }))
+                          }
+                          required
+                        />
                         <TextField
                           select
                           label="Groupable"
                           value={fieldForm.isGroupable ? "true" : "false"}
-                          onChange={(e) => setFieldForm((prev) => ({ ...prev, isGroupable: e.target.value === "true" }))}
+                          onChange={(e) =>
+                            setFieldForm((prev) => ({
+                              ...prev,
+                              isGroupable: e.target.value === "true"
+                            }))
+                          }
                         >
                           <MenuItem value="true">true</MenuItem>
                           <MenuItem value="false">false</MenuItem>
@@ -538,7 +982,12 @@ export default function AdminPage() {
                           select
                           label="Filterable"
                           value={fieldForm.isFilterable ? "true" : "false"}
-                          onChange={(e) => setFieldForm((prev) => ({ ...prev, isFilterable: e.target.value === "true" }))}
+                          onChange={(e) =>
+                            setFieldForm((prev) => ({
+                              ...prev,
+                              isFilterable: e.target.value === "true"
+                            }))
+                          }
                         >
                           <MenuItem value="true">true</MenuItem>
                           <MenuItem value="false">false</MenuItem>
@@ -547,42 +996,24 @@ export default function AdminPage() {
                           select
                           label="Aggregatable"
                           value={fieldForm.isAggregatable ? "true" : "false"}
-                          onChange={(e) => setFieldForm((prev) => ({ ...prev, isAggregatable: e.target.value === "true" }))}
+                          onChange={(e) =>
+                            setFieldForm((prev) => ({
+                              ...prev,
+                              isAggregatable: e.target.value === "true"
+                            }))
+                          }
                         >
                           <MenuItem value="true">true</MenuItem>
                           <MenuItem value="false">false</MenuItem>
                         </TextField>
-                        <Button type="submit" variant="contained">Create Field</Button>
+                        <Button type="submit" variant="contained">
+                          Create Field
+                        </Button>
                       </Stack>
                     </Box>
                   </Paper>
-                </Grid>
-
-                <Grid item xs={12}>
-                  <Paper variant="outlined" sx={{ p: 2 }}>
-                    <Typography variant="subtitle1" sx={{ mb: 1 }}>Add Relationship</Typography>
-                    <Box component="form" onSubmit={handleCreateRelationship}>
-                      <Grid container spacing={1}>
-                        <Grid item xs={12} md={3}>
-                          <TextField fullWidth label="From Entity" value={relationshipForm.fromEntity} onChange={(e) => setRelationshipForm((prev) => ({ ...prev, fromEntity: e.target.value }))} required />
-                        </Grid>
-                        <Grid item xs={12} md={3}>
-                          <TextField fullWidth label="To Entity" value={relationshipForm.toEntity} onChange={(e) => setRelationshipForm((prev) => ({ ...prev, toEntity: e.target.value }))} required />
-                        </Grid>
-                        <Grid item xs={12} md={4}>
-                          <TextField fullWidth label="Join Path" value={relationshipForm.joinPath} onChange={(e) => setRelationshipForm((prev) => ({ ...prev, joinPath: e.target.value }))} required />
-                        </Grid>
-                        <Grid item xs={12} md={1}>
-                          <TextField fullWidth label="Cardinality" value={relationshipForm.cardinality} onChange={(e) => setRelationshipForm((prev) => ({ ...prev, cardinality: e.target.value }))} required />
-                        </Grid>
-                        <Grid item xs={12} md={1}>
-                          <Button type="submit" variant="contained" fullWidth sx={{ height: "100%" }}>Create</Button>
-                        </Grid>
-                      </Grid>
-                    </Box>
-                  </Paper>
-                </Grid>
-              </Grid>
+                </Stack>
+              ) : null}
             </Stack>
           </CardContent>
         </Card>
