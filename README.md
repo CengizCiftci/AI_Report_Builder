@@ -1,36 +1,36 @@
-# SQL Builder - ChatGPT Destekli Rapor Planlama (MVP)
+# SQL Builder - ChatGPT-Supported Report Planning (MVP)
 
-Bu repo, doğal dilde alınan rapor isteğini `REPORT Plan` JSON'una çeviren ve bu planı güvenli/deterministic SQL'e dönüştüren bir başlangıç iskeletidir.
+This repo is a starter skeleton that converts a report request received in natural language into a `REPORT Plan` JSON and transforms this plan into safe/deterministic SQL.
 
-## Teknoloji
+## Technology
 - Frontend: Next.js + Material UI
 - Backend: Node.js + Express
 - Database: PostgreSQL
 
-## Klasör Yapısı
-- `/frontend`: Login + rapor planlama ekranı
+## Folder Structure
+- `/frontend`: Login + report planning screen
 - `/backend`: Auth, dictionary, report plan, SQL builder API
-- `/db`: PostgreSQL schema ve seed dosyaları
+- `/db`: PostgreSQL schema and seed files
 
-## Hızlı Başlangıç
-1. PostgreSQL başlat:
+## Quick Start
+1. Start PostgreSQL:
    - `docker compose up -d`
-2. Backend ortam dosyası:
+2. Backend environment file:
    - `cp backend/.env.example backend/.env`
-3. Frontend ortam dosyası:
+3. Frontend environment file:
    - `cp frontend/.env.example frontend/.env.local`
-4. Backend çalıştır:
+4. Run backend:
    - `cd backend && npm install && npm run dev`
-5. Frontend çalıştır:
+5. Run frontend:
    - `cd frontend && npm install && npm run dev`
 
-## Demo Kullanıcılar
+## Demo Users
 - `superadmin / admin123`
 - `teacher_ayse / teacher123`
 
-Not: Seed içinde demo amaçlı düz metin parola kullanılıyor. Üretimde bcrypt hash kullanın.
+Note: Plain-text passwords are used in the seed for demo purposes. Use bcrypt hashes in production.
 
-## API Özeti
+## API Summary
 - `POST /api/auth/login`
 - `GET /api/auth/me`
 - `GET /api/dictionary`
@@ -47,16 +47,16 @@ Not: Seed içinde demo amaçlı düz metin parola kullanılıyor. Üretimde bcry
 - `GET /api/admin/analytics/summary`
 - `GET /api/admin/query-logs`
 
-## Güvenlik Prensipleri
-- LLM sadece plan üretir; SQL üretimi backend'de whitelist metadata ile yapılır.
-- Tüm sorgular parameterized (`$1, $2...`).
-- Kullanıcı scope'u (`school_id`, `grade_level`, `course_id`, `teacher_id`) zorunlu filtre olarak uygulanır.
-- LLM çıktısı Zod ile doğrulanır.
+## Security Principles
+- The LLM only generates the plan; SQL generation is performed in the backend using whitelist metadata.
+- All queries are parameterized (`$1, $2...`).
+- User scope (`school_id`, `grade_level`, `course_id`, `teacher_id`) is applied as a mandatory filter.
+- The LLM output is validated with Zod.
 
 
-## Örnek Sorgular
+## Sample Queries
 
-- `List schools`
+- `List schools`, `All campuses`
 
 - `List students by grade, course session, and school` 
 
@@ -66,11 +66,11 @@ Not: Seed içinde demo amaçlı düz metin parola kullanılıyor. Üretimde bcry
 - `For the fall semester, provide the attendance rate and the number of students by course for 9th grade.` (Clarification question for fall semester)
    |- **will ask for exact date range, won't accept informal description**
 
-- `For the fall semester, provide the absenteeism rate and the number of students by course for 9th grade.` (Clarification question sorar)
+- `For the fall semester, provide the absenteeism rate and the number of students by course for 9th grade.` (Asks a clarification question)
    |- **Unsupported metric: absenteeism_rate**
 
 
-## Örnek Sorgular Turkce
+## Sample Queries in Turkish
 - `9. sınıf öğrenci listesi`
 
-- `Sonbahar dönemi için 9. sınıf bazında derslere göre devamsızlık oranı ve öğrenci sayısını getir.` (Clarification question sorar)
+- `Sonbahar dönemi için 9. sınıf bazında derslere göre devamsızlık oranı ve öğrenci sayısını getir.` (Asks a clarification question)

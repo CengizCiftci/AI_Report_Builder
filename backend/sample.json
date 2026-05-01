@@ -1,0 +1,663 @@
+// Dictionary JSON file for educational domain entities, synonyms, metrics, relationships, and fields.
+{
+  "entities": [
+    {
+      "id": 1,
+      "key": "school",
+      "label": "School",
+      "description": "Institution/campus level entity"
+    },
+    {
+      "id": 2,
+      "key": "grade",
+      "label": "Grade",
+      "description": "Grade level of students"
+    },
+    {
+      "id": 3,
+      "key": "course",
+      "label": "Course",
+      "description": "Course definition"
+    },
+    {
+      "id": 4,
+      "key": "section",
+      "label": "Section",
+      "description": "Class/section level offering"
+    },
+    {
+      "id": 5,
+      "key": "teacher",
+      "label": "Teacher",
+      "description": "Teacher entity"
+    },
+    {
+      "id": 6,
+      "key": "student",
+      "label": "Student",
+      "description": "Student entity"
+    },
+    {
+      "id": 7,
+      "key": "attendance",
+      "label": "Attendance",
+      "description": "Daily attendance facts"
+    }
+  ],
+  "synonyms": [
+    {
+      "id": 1,
+      "entity_key": "school",
+      "synonym_text": "campus"
+    },
+    {
+      "id": 2,
+      "entity_key": "school",
+      "synonym_text": "school building"
+    },
+    {
+      "id": 3,
+      "entity_key": "grade",
+      "synonym_text": "class level"
+    },
+    {
+      "id": 4,
+      "entity_key": "grade",
+      "synonym_text": "grade band"
+    },
+    {
+      "id": 5,
+      "entity_key": "course",
+      "synonym_text": "subject"
+    },
+    {
+      "id": 6,
+      "entity_key": "section",
+      "synonym_text": "classroom section"
+    },
+    {
+      "id": 7,
+      "entity_key": "section",
+      "synonym_text": "class"
+    },
+    {
+      "id": 8,
+      "entity_key": "attendance",
+      "synonym_text": "devamsizlik"
+    },
+    {
+      "id": 9,
+      "entity_key": "attendance",
+      "synonym_text": "attendance"
+    },
+    {
+      "id": 10,
+      "entity_key": "section",
+      "synonym_text": "course session"
+    }
+  ],
+  "metrics": [
+    {
+      "key": "student_count",
+      "label": "Student Count",
+      "formula_type": "count_distinct",
+      "numerator_field": "student_id",
+      "denominator_field": null,
+      "aggregation_default": "COUNT"
+    },
+    {
+      "key": "attendance_rate",
+      "label": "Attendance Rate",
+      "formula_type": "ratio",
+      "numerator_field": "present_days",
+      "denominator_field": "total_days",
+      "aggregation_default": "RATIO"
+    },
+    {
+      "key": "attendance_days",
+      "label": "Attendance Days",
+      "formula_type": "sum",
+      "numerator_field": "present_days",
+      "denominator_field": null,
+      "aggregation_default": "SUM"
+    },
+    {
+      "key": "total_days",
+      "label": "Total Instruction Days",
+      "formula_type": "sum",
+      "numerator_field": "total_days",
+      "denominator_field": null,
+      "aggregation_default": "SUM"
+    }
+  ],
+  "relationships": [
+    {
+      "from_entity": "course",
+      "to_entity": "section",
+      "join_path": "courses.id = sections.course_id",
+      "cardinality": "1:N"
+    },
+    {
+      "from_entity": "section",
+      "to_entity": "teacher",
+      "join_path": "sections.teacher_id = teachers.id",
+      "cardinality": "N:1"
+    },
+    {
+      "from_entity": "section",
+      "to_entity": "student",
+      "join_path": "sections.id = enrollments.section_id AND enrollments.student_id = students.id",
+      "cardinality": "N:M"
+    },
+    {
+      "from_entity": "student",
+      "to_entity": "school",
+      "join_path": "students.school_id = schools.id",
+      "cardinality": "N:1"
+    },
+    {
+      "from_entity": "attendance",
+      "to_entity": "student",
+      "join_path": "attendance_daily.student_id = students.id",
+      "cardinality": "N:1"
+    },
+    {
+      "from_entity": "attendance",
+      "to_entity": "section",
+      "join_path": "attendance_daily.section_id = sections.id",
+      "cardinality": "N:1"
+    }
+  ],
+  "fields": [
+    {
+      "field_key": "school_id",
+      "entity_key": "school",
+      "data_type": "integer",
+      "is_groupable": true,
+      "is_filterable": true,
+      "is_aggregatable": false
+    },
+    {
+      "field_key": "school_name",
+      "entity_key": "school",
+      "data_type": "text",
+      "is_groupable": true,
+      "is_filterable": false,
+      "is_aggregatable": false
+    },
+    {
+      "field_key": "grade_level",
+      "entity_key": "grade",
+      "data_type": "integer",
+      "is_groupable": true,
+      "is_filterable": true,
+      "is_aggregatable": false
+    },
+    {
+      "field_key": "course_id",
+      "entity_key": "course",
+      "data_type": "integer",
+      "is_groupable": true,
+      "is_filterable": true,
+      "is_aggregatable": false
+    },
+    {
+      "field_key": "course_name",
+      "entity_key": "course",
+      "data_type": "text",
+      "is_groupable": true,
+      "is_filterable": true,
+      "is_aggregatable": false
+    },
+    {
+      "field_key": "class_id",
+      "entity_key": "section",
+      "data_type": "integer",
+      "is_groupable": true,
+      "is_filterable": true,
+      "is_aggregatable": false
+    },
+    {
+      "field_key": "class_name",
+      "entity_key": "section",
+      "data_type": "text",
+      "is_groupable": true,
+      "is_filterable": true,
+      "is_aggregatable": false
+    },
+    {
+      "field_key": "teacher_id",
+      "entity_key": "teacher",
+      "data_type": "integer",
+      "is_groupable": true,
+      "is_filterable": true,
+      "is_aggregatable": false
+    },
+    {
+      "field_key": "teacher_name",
+      "entity_key": "teacher",
+      "data_type": "text",
+      "is_groupable": true,
+      "is_filterable": false,
+      "is_aggregatable": false
+    },
+    {
+      "field_key": "student_id",
+      "entity_key": "student",
+      "data_type": "integer",
+      "is_groupable": true,
+      "is_filterable": true,
+      "is_aggregatable": false
+    },
+    {
+      "field_key": "student_name",
+      "entity_key": "student",
+      "data_type": "text",
+      "is_groupable": true,
+      "is_filterable": true,
+      "is_aggregatable": false
+    },
+    {
+      "field_key": "attendance_date",
+      "entity_key": "attendance",
+      "data_type": "date",
+      "is_groupable": true,
+      "is_filterable": true,
+      "is_aggregatable": false
+    },
+    {
+      "field_key": "attendance_rate",
+      "entity_key": "attendance",
+      "data_type": "numeric",
+      "is_groupable": false,
+      "is_filterable": false,
+      "is_aggregatable": true
+    },
+    {
+      "field_key": "attendance_days",
+      "entity_key": "attendance",
+      "data_type": "integer",
+      "is_groupable": false,
+      "is_filterable": false,
+      "is_aggregatable": true
+    },
+    {
+      "field_key": "total_days",
+      "entity_key": "attendance",
+      "data_type": "integer",
+      "is_groupable": false,
+      "is_filterable": false,
+      "is_aggregatable": true
+    },
+    {
+      "field_key": "student_count",
+      "entity_key": "student",
+      "data_type": "integer",
+      "is_groupable": false,
+      "is_filterable": false,
+      "is_aggregatable": true
+    }
+  ]
+}
+
+
+// User Scope 
+{
+   "roles": [
+      "TEACHER"
+   ],
+   "scopes": [
+      {
+         "course_id": 1,
+         "school_id": 1,
+         "teacher_id": 1,
+         "grade_level": 9
+      }
+   ]
+}
+
+// json schema for AI
+{
+   "type": "object",
+   "additionalProperties": false,
+   "properties": {
+      "intent": {
+         "type": "string"
+      },
+      "granularity": {
+         "type": "string",
+         "enum": [
+            "student",
+            "class",
+            "grade",
+            "school"
+         ]
+      },
+      "entities": {
+         "type": "object",
+         "additionalProperties": false,
+         "properties": {
+            "school_id": {
+               "anyOf": [
+                  {
+                     "type": "integer"
+                  },
+                  {
+                     "type": "string"
+                  },
+                  {
+                     "type": null
+                  }
+               ]
+            },
+            "grade_level": {
+               "anyOf": [
+                  {
+                     "type": "integer"
+                  },
+                  {
+                     "type": "string"
+                  },
+                  {
+                     "type": null
+                  }
+               ]
+            },
+            "course_id": {
+               "anyOf": [
+                  {
+                     "type": "integer"
+                  },
+                  {
+                     "type": "string"
+                  },
+                  {
+                     "type": null
+                  }
+               ]
+            },
+            "teacher_id": {
+               "anyOf": [
+                  {
+                     "type": "integer"
+                  },
+                  {
+                     "type": "string"
+                  },
+                  {
+                     "type": null
+                  }
+               ]
+            },
+            "marking_period": {
+               "anyOf": [
+                  {
+                     "type": "string"
+                  },
+                  {
+                     "type": null
+                  }
+               ]
+            },
+            "date_range_start": {
+               "anyOf": [
+                  {
+                     "type": "string"
+                  },
+                  {
+                     "type": null
+                  }
+               ]
+            },
+            "date_range_end": {
+               "anyOf": [
+                  {
+                     "type": "string"
+                  },
+                  {
+                     "type": null
+                  }
+               ]
+            },
+            "subgroup": {
+               "anyOf": [
+                  {
+                     "type": "string"
+                  },
+                  {
+                     "type": null
+                  }
+               ]
+            }
+         },
+         "required": [
+            "school_id",
+            "grade_level",
+            "course_id",
+            "teacher_id",
+            "marking_period",
+            "date_range_start",
+            "date_range_end",
+            "subgroup"
+         ]
+      },
+      "columns": {
+         "type": "array",
+         "minItems": 1,
+         "items": {
+            "type": "string"
+         }
+      },
+      "metrics": {
+         "type": "array",
+         "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+               "name": {
+                  "type": "string"
+               },
+               "aggregation": {
+                  "anyOf": [
+                     {
+                        "type": "string",
+                        "enum": [
+                           "COUNT",
+                           "SUM",
+                           "AVG",
+                           "MIN",
+                           "MAX",
+                           "RATIO",
+                           "CUSTOM"
+                        ]
+                     },
+                     {
+                        "type": null
+                     }
+                  ]
+               },
+               "field": {
+                  "anyOf": [
+                     {
+                        "type": "string"
+                     },
+                     {
+                        "type": null
+                     }
+                  ]
+               },
+               "numerator": {
+                  "anyOf": [
+                     {
+                        "type": "string"
+                     },
+                     {
+                        "type": null
+                     }
+                  ]
+               },
+               "denominator": {
+                  "anyOf": [
+                     {
+                        "type": "string"
+                     },
+                     {
+                        "type": null
+                     }
+                  ]
+               },
+               "expression": {
+                  "anyOf": [
+                     {
+                        "type": "string"
+                     },
+                     {
+                        "type": null
+                     }
+                  ]
+               }
+            },
+            "required": [
+               "name",
+               "aggregation",
+               "field",
+               "numerator",
+               "denominator",
+               "expression"
+            ]
+         }
+      },
+      "filters": {
+         "type": "array",
+         "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+               "field": {
+                  "type": "string"
+               },
+               "operator": {
+                  "type": "string",
+                  "enum": [
+                     "=",
+                     "!=",
+                     "IN",
+                     "NOT IN",
+                     ">",
+                     ">=",
+                     "<",
+                     "<=",
+                     "BETWEEN",
+                     "ILIKE"
+                  ]
+               },
+               "value": {
+                  "anyOf": [
+                     {
+                        "type": "string"
+                     },
+                     {
+                        "type": "integer"
+                     },
+                     {
+                        "type": "number"
+                     },
+                     {
+                        "type": "boolean"
+                     },
+                     {
+                        "type": "array",
+                        "items": {
+                           "anyOf": [
+                              {
+                                 "type": "string"
+                              },
+                              {
+                                 "type": "integer"
+                              },
+                              {
+                                 "type": "number"
+                              },
+                              {
+                                 "type": "boolean"
+                              }
+                           ]
+                        }
+                     },
+                     {
+                        "type": null
+                     }
+                  ]
+               }
+            },
+            "required": [
+               "field",
+               "operator",
+               "value"
+            ]
+         }
+      },
+      "sort": {
+         "type": "array",
+         "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+               "field": {
+                  "type": "string"
+               },
+               "direction": {
+                  "type": "string",
+                  "enum": [
+                     "ASC",
+                     "DESC"
+                  ]
+               }
+            },
+            "required": [
+               "field",
+               "direction"
+            ]
+         }
+      },
+      "limit": {
+         "type": "integer",
+         "minimum": 1,
+         "maximum": 1000
+      },
+      "clarificationQuestion": {
+         "anyOf": [
+            {
+               "type": "string"
+            },
+            {
+               "type": null
+            }
+         ]
+      },
+      "confidence": {
+         "anyOf": [
+            {
+               "type": "number",
+               "minimum": 0,
+               "maximum": 1
+            },
+            {
+               "type": null
+            }
+         ]
+      }
+   },
+   "required": [
+      "intent",
+      "granularity",
+      "entities",
+      "columns",
+      "metrics",
+      "filters",
+      "sort",
+      "limit",
+      "clarificationQuestion",
+      "confidence"
+   ]
+}

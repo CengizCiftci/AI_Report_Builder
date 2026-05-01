@@ -231,6 +231,9 @@ async function callOpenAIPlanner({ prompt, dictionary, user, auditLog }) {
     model: env.OPENAI_MODEL
   });
 
+  // console.log("Planner prompt:", prompt);
+  // console.log("Planner dictionary:", JSON.stringify(dictionary));
+  console.log("Planner user scope:", JSON.stringify({ roles: user.roles, scopes: user.scopes }));
   const body = {
     model: env.OPENAI_MODEL,
     input: [
