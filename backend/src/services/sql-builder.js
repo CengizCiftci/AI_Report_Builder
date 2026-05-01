@@ -114,12 +114,41 @@ function appendFilterSql(filter, params, whereParts) {
 }
 
 function buildSql(plan) {
-  const dimensions = plan.columns.map((field) => ({
+  const dimensionFields = [];
+  const autoMetricNames = [];
+
+  for (const field of plan.columns || []) {
+    if (COLUMN_SQL[field]) {
+      dimensionFields.push(field);
+      continue;
+    }
+
+    // Be tolerant when planner puts metric aliases under `columns`.
+    if (METRIC_SQL[field]) {
+      autoMetricNames.push(field);
+      continue;
+    }
+
+    throw new HttpError(400, `Unsupported field: ${field}`);
+  }
+
+  const dimensions = dimensionFields.map((field) => ({
     field,
     expression: toExpression(field),
   }));
 
-  const metrics = (plan.metrics || []).map((metric) =>
+  const metricMap = new Map();
+  for (const metric of plan.metrics || []) {
+    if (!metric?.name) continue;
+    metricMap.set(metric.name, metric);
+  }
+  for (const metricName of autoMetricNames) {
+    if (!metricMap.has(metricName)) {
+      metricMap.set(metricName, { name: metricName });
+    }
+  }
+
+  const metrics = [...metricMap.values()].map((metric) =>
     buildMetricExpression(metric),
   );
   if (!metrics.length) {

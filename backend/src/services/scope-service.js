@@ -1,3 +1,5 @@
+const { HttpError } = require("../utils/http-error");
+
 function hasRole(user, role) {
   return Array.isArray(user?.roles) && user.roles.includes(role);
 }
@@ -10,28 +12,76 @@ function collectScopeValues(scopes, key) {
   return [...new Set(values)];
 }
 
+function normalizeToArray(value) {
+  if (Array.isArray(value)) {
+    return value.filter((item) => item !== null && item !== undefined);
+  }
+  if (value === null || value === undefined) return [];
+  return [value];
+}
+
+function dedupeByString(values) {
+  const map = new Map();
+  for (const value of values) {
+    map.set(String(value), value);
+  }
+  return [...map.values()];
+}
+
+function intersectByString(requestedValues, allowedValues) {
+  const allowedMap = new Map(
+    allowedValues.map((allowedValue) => [String(allowedValue), allowedValue])
+  );
+  const intersection = [];
+  const seen = new Set();
+
+  for (const requestedValue of requestedValues) {
+    const key = String(requestedValue);
+    if (!allowedMap.has(key) || seen.has(key)) continue;
+    seen.add(key);
+    intersection.push(allowedMap.get(key));
+  }
+
+  return intersection;
+}
+
 function upsertInFilter(filters, field, values) {
   if (!values.length) return filters;
 
   const nextFilters = Array.isArray(filters) ? [...filters] : [];
   const idx = nextFilters.findIndex((f) => f.field === field);
+  const scopedValues = dedupeByString(values);
 
   if (idx >= 0) {
-    const existingValue = nextFilters[idx]?.value;
-    const existingValues = Array.isArray(existingValue)
-      ? existingValue
-      : existingValue === null || existingValue === undefined
-        ? []
-        : [existingValue];
+    const existingFilter = nextFilters[idx];
+    const operator = existingFilter?.operator;
 
-    nextFilters[idx] = {
-      field,
-      operator: "IN",
-      value: [...new Set([...existingValues, ...values])]
-    };
-  } else {
-    nextFilters.push({ field, operator: "IN", value: values });
+    // If user already requested a value for this field, narrow it by intersection.
+    if (operator === "=" || operator === "IN") {
+      const requestedValues = normalizeToArray(existingFilter?.value);
+      const intersection = intersectByString(requestedValues, scopedValues);
+
+      if (!intersection.length) {
+        throw new HttpError(
+          403,
+          `Requested filter for "${field}" is outside your allowed scope.`
+        );
+      }
+
+      nextFilters[idx] = {
+        field,
+        operator: "IN",
+        value: intersection
+      };
+      return nextFilters;
+    }
+
+    // Keep original filter semantics and enforce scope with an additional IN filter.
+    nextFilters.push({ field, operator: "IN", value: scopedValues });
+    return nextFilters;
   }
+
+  nextFilters.push({ field, operator: "IN", value: scopedValues });
 
   return nextFilters;
 }
