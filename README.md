@@ -26,7 +26,7 @@ This repo is a starter skeleton that converts a report request received in natur
 
 ## Demo Users
 - `superadmin / admin123`
-- `teacher_ayse / teacher123`
+- `teacher / teacher123`
 
 Note: Plain-text passwords are used in the seed for demo purposes. Use bcrypt hashes in production.
 
