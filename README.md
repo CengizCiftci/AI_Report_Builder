@@ -61,16 +61,31 @@ Note: Plain-text passwords are used in the seed for demo purposes. Use bcrypt ha
 - `List students by grade, course session, and school` 
 
 - `List of 9th grade students`
-   |- **call for admin and teachers separetly. It should return different results**
-
 - `For the fall semester, provide the attendance rate and the number of students by course for 9th grade.` (Clarification question for fall semester)
-   |- **will ask for exact date range, won't accept informal description**
-
 - `For the fall semester, provide the absenteeism rate and the number of students by course for 9th grade.` (Asks a clarification question)
-   |- **Unsupported metric: absenteeism_rate**
+- `Show student count by school for the last 30 days.`
+- `List all 9th grade students in School 1.`
+- `Show attendance rate by course for Grade 9 between 2026-03-01 and 2026-03-31.`
+- `Compare attendance rate by school for the Spring term.`
+- `List classes with the lowest attendance rate this month.`
+- `Show student count and attendance rate by teacher for School 2.`
+- `List students with attendance rate below 85% in the last 60 days.`
+- `Show daily attendance trend by grade level for the past 2 weeks.`
+- `List courses with the highest student count by school.`
+- `Show absenteeism days and total instructional days by class for Grade 10.`
 
 
 ## Sample Queries in Turkish
 - `9. sınıf öğrenci listesi`
-
 - `Sonbahar dönemi için 9. sınıf bazında derslere göre devamsızlık oranı ve öğrenci sayısını getir.` (Asks a clarification question)
+
+## Out of domain questions
+
+- `Show guardian contact rate by school for last month.`
+- `List students by homeroom building floor and grade.`
+- `Show attendance by bus route number.`
+- `Compare parent engagement score by teacher.`
+- `List courses with highest lunch participation rate.`
+- `Show student count by district region and campus.`
+- `Filter students where device_serial_number starts with ‘A1’.`
+- `Show discipline_referral_rate by course for Grade 9.`

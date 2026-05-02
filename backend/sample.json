@@ -1,5 +1,6 @@
-// Dictionary JSON file for educational domain entities, synonyms, metrics, relationships, and fields.
+[
 {
+  "purpose": "This JSON file serves as a DICTIONARY for an educational domain, defining key entities such as schools, grades, courses, sections, teachers, students, and attendance. It also includes synonyms for these entities to facilitate natural language processing, metrics for analysis, relationships between entities, and detailed field definitions for each entity. This structured format allows for consistent data modeling and querying within the educational context." ,
   "entities": [
     {
       "id": 1,
@@ -298,11 +299,9 @@
       "is_aggregatable": true
     }
   ]
-}
-
-
-// User Scope 
+},
 {
+   "purpose": "Defines the USER SCOPE for a user in the educational domain context. This JSON object specifies the user's roles (e.g., TEACHER) and the specific scopes of access they have, such as which courses, schools, or grade levels they can access or manage.",
    "roles": [
       "TEACHER"
    ],
@@ -314,10 +313,9 @@
          "grade_level": 9
       }
    ]
-}
-
-// json schema for AI
+},
 {
+   "purpose": "JSON Schema that AI strictly adheres to when generating SQL query definitions based on user input and context. This schema defines the structure of the JSON object that the AI will produce, ensuring consistency and validity in the generated output.", 
    "type": "object",
    "additionalProperties": false,
    "properties": {
@@ -661,3 +659,4 @@
       "confidence"
    ]
 }
+]
