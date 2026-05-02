@@ -9,7 +9,7 @@ ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO users (id, username, email, password_hash, is_active) VALUES
   ('00000000-0000-0000-0000-000000000001', 'superadmin', 'superadmin@example.com', 'admin123', TRUE),
-  ('00000000-0000-0000-0000-000000000002', 'teacher_ayse', 'ayse.teacher@example.com', 'teacher123', TRUE)
+  ('00000000-0000-0000-0000-000000000002', 'teacher', 'teacher@example.com', 'teacher123', TRUE)
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO user_roles (user_id, role_id) VALUES
@@ -21,8 +21,8 @@ ON CONFLICT (user_id, role_id) DO NOTHING;
 -- Domain seed
 -- =========================
 INSERT INTO schools (id, name, campus_code) VALUES
-  (1, 'Ataturk High School', 'ATHS'),
-  (2, 'Cumhuriyet High School', 'CHS')
+  (1, 'Bergen High School', 'ATHS'),
+  (2, 'Hudson High School', 'CHS')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO teachers (id, school_id, full_name) VALUES
@@ -72,7 +72,7 @@ INSERT INTO attendance_daily (student_id, section_id, attendance_date, present_d
   (5, 3, '2025-09-03', 0, 1)
 ON CONFLICT (student_id, section_id, attendance_date) DO NOTHING;
 
--- teacher_ayse sadece school 1 ve teacher 1 scope'una sahip
+-- teacher user only has access to school 1, grade 9, course 1, teacher 1 scope 
 INSERT INTO user_scopes (user_id, school_id, grade_level, course_id, teacher_id) VALUES
   ('00000000-0000-0000-0000-000000000002', 1, 9, 1, 1)
 ON CONFLICT (user_id, school_id, grade_level, course_id, teacher_id) DO NOTHING;
